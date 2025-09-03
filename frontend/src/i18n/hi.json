@@ -1,0 +1,190 @@
+{
+  "languageAndRegionalSettings": "भाषा और क्षेत्रीय सेटिंग्स",
+  "primaryLanguage": "प्राथमिक भाषा",
+  "dateFormat": "तारीख़ प्रारूप",
+  "defaultVisitSettings": "डिफ़ॉल्ट यात्रा सेटिंग्स",
+  "defaultVisitDuration": "डिफ़ॉल्ट यात्रा अवधि",
+  "preparationTime": "तैयारी का समय",
+
+  "english": "अंग्रेज़ी",
+  "hindi": "हिंदी",
+  "bengali": "बंगाली",
+  "tamil": "तमिल",
+  "telugu": "तेलुगू",
+
+  "30min": "30 मिनट",
+  "1hour": "1 घंटा",
+  "2hours": "2 घंटे",
+  "halfDay": "आधा दिन",
+  "fullDay": "पूरा दिन",
+  "15min": "15 मिनट",
+
+  "settings": {
+    "title": "सेटिंग्स",
+    "saveChanges": "परिवर्तन सहेजें"
+  },
+
+  "profile": {
+    "title": "प्रोफ़ाइल फ़ोटो और लोगो",
+    "photoLabel": "विधायक/सांसद फ़ोटो",
+    "photoDesc": "फ़ोटो अपलोड करने के लिए क्लिक करें या खींचें",
+    "photoSubtext": "अनुशंसित: 400x400px, अधिकतम 2MB",
+    "logoLabel": "पार्टी लोगो",
+    "logoDesc": "लोगो अपलोड करने के लिए क्लिक करें या खींचें",
+    "logoSubtext": "अनुशंसित: 200x200px, अधिकतम 1MB",
+    "chooseFile": "फ़ाइल चुनें"
+  },
+
+  "sidebar": {
+    "profile": "प्रोफ़ाइल और मीडिया",
+    "notifications": "सूचनाएं",
+    "preferences": "प्राथमिकताएं",
+    "users": "उपयोगकर्ता प्रबंधन",
+    "areas": "निर्वाचन क्षेत्र",
+    "security": "सुरक्षा"
+  },
+
+  "notifications": {
+  "whatsappTitle": "व्हाट्सएप सूचनाएं",
+  "enableWhatsapp": "व्हाट्सएप अलर्ट सक्षम करें",
+  "whatsappDesc": "व्हाट्सएप पर महत्वपूर्ण अपडेट प्राप्त करें",
+  "alertTypes": "अलर्ट प्रकार",
+  "visitReminders": "यात्रा अनुस्मारक",
+  "urgentIssues": "तत्काल क्षेत्रीय समस्याएं",
+  "dailySummary": "दैनिक गतिविधि सारांश",
+  "otherTitle": "अन्य सूचना वरीयताएं",
+  "email": "ईमेल सूचनाएं",
+  "sms": "एसएमएस अलर्ट",
+  "push": "पुश सूचनाएं"
+},
+"users": {
+  "title": "टीम प्रबंधन",
+  "add": "उपयोगकर्ता जोड़ें",
+  "edit": "उपयोगकर्ता संपादित करें",
+  "name": "नाम",
+  "email": "ईमेल",
+  "role": "भूमिका",
+  "status": "स्थिति",
+  "actions": "क्रियाएँ",
+  "active": "सक्रिय",
+  "inactive": "निष्क्रिय",
+  "save": "सहेजें",
+  "roles": {
+    "assistant": "सहायक",
+    "analyst": "विश्लेषक"
+  }
+},
+"areas": {
+  "title": "विधानसभा क्षेत्र",
+  "addArea": "क्षेत्र जोड़ें",
+  "newConstituencyPlaceholder": "नई विधानसभा का नाम",
+  "newSubAreaPlaceholder": "पहला उपक्षेत्र",
+  "subAreaPlaceholder": "उपक्षेत्र दर्ज करें",
+  "addSubArea": "+ उपक्षेत्र जोड़ें"
+},
+"security": {
+  "password": "पासवर्ड और सुरक्षा",
+  "currentPassword": "वर्तमान पासवर्ड",
+  "newPassword": "नया पासवर्ड",
+  "confirmPassword": "नया पासवर्ड पुष्टि करें",
+  "currentPasswordPlaceholder": "वर्तमान पासवर्ड दर्ज करें",
+  "newPasswordPlaceholder": "नया पासवर्ड दर्ज करें",
+  "confirmPasswordPlaceholder": "नया पासवर्ड फिर से दर्ज करें",
+  "updatePassword": "पासवर्ड अपडेट करें",
+  "fillAllFields": "कृपया सभी फ़ील्ड भरें।",
+  "passwordMismatch": "नया पासवर्ड और पुष्टि मेल नहीं खाते।",
+  "passwordSuccess": "✅ पासवर्ड सफलतापूर्वक अपडेट हो गया!",
+  "2fa": "दो-चरणीय प्रमाणीकरण",
+  "enable2fa": "2FA सक्षम करें",
+  "2faDescription": "अपने खाते की सुरक्षा के लिए अतिरिक्त परत जोड़ें",
+  "2faEnabled": "2FA सक्रिय है"
+},
+"dashboard": {
+  "dashboard": "डैशबोर्ड",
+  "issues": "समस्याएं",
+  "visits": "यात्राएं",
+  "meetingPrograms": "बैठकें और कार्यक्रम",
+          "lokSabha": "लोक सभा सत्र",
+    "mplads": "एमपीएलएडीएस परियोजनाएं",
+    "researchRepository": "अनुसंधान भंडार",
+    "socialMedia": "सोशल मीडिया ट्रैकर",
+    "areaInsight": "क्षेत्र अंतर्दृष्टि",
+  "reports": "रिपोर्ट",
+  "receivedLetters": "प्राप्त पत्र",
+  "sentLetters": "भेजे गए पत्र",
+  "settings": "सेटिंग्स",
+  "addAssistants": "सहायक जोड़ें",
+  "logout": "लॉगआउट"
+},
+"reports": {
+  "loading": "रिपोर्ट डेटा लोड हो रहा है...",
+  "errorTitle": "डेटा लोड करने में त्रुटि",
+  "retry": "पुनः प्रयास करें",
+  "heading": "रिपोर्ट डैशबोर्ड",
+  "subheading": "नागरिक समस्याओं का विश्लेषण करें और समाधान प्रगति को ट्रैक करें",
+  "noData": "आपकी फ़िल्टर सेटिंग्स से मेल खाता कोई डेटा नहीं मिला।",
+  "clearFilters": "सभी फ़िल्टर साफ़ करें"
+},
+"filter": {
+    "heading": "फिल्टर",
+    "active": "सक्रिय",
+    "quick": "त्वरित",
+    "clearAll": "सभी साफ़ करें",
+    "fromDate": "प्रारंभ दिनांक",
+    "toDate": "अंत दिनांक",
+    "area": "क्षेत्र",
+    "category": "श्रेणी",
+    "status": "स्थिति",
+    "available": "उपलब्ध",
+    "searchAreas": "क्षेत्र खोजें...",
+    "searchCategories": "श्रेणी खोजें...",
+    "allAreas": "सभी क्षेत्र",
+    "allCategories": "सभी श्रेणियां",
+    "searchByArea": "क्षेत्र से खोजें...",
+    "searchByCategory": "श्रेणी से खोजें...",
+    "activeFilters": "सक्रिय फिल्टर",
+    "from": "से",
+    "to": "तक",
+    "found": "मिले",
+    "totalIssues": "कुल समस्याएं",
+    "across": "में फैली",
+    "areas": "क्षेत्र",
+    "in": "में",
+    "categories": "श्रेणियां",
+    "resetAllFilters": "सभी फिल्टर रीसेट करें",
+    "quickFilters": {
+      "last7Days": "पिछले 7 दिन",
+      "last30Days": "पिछले 30 दिन",
+      "thisMonth": "इस महीने"
+    },
+    "statusOptions": {
+      "all": "सभी",
+      "pending": "लंबित",
+      "resolved": "हल किया गया",
+      "inProgress": "प्रगति में",
+      "rejected": "अस्वीकृत"
+    }
+  },
+  "report": {
+  "daily": "प्रतिदिन",
+  "monthly": "मासिक",
+  "resolutionTrends": "समाधान प्रवृत्तियाँ",
+  "noResolvedData": "चयनित फ़िल्टर के लिए कोई समाधान प्राप्त समस्याएं नहीं मिलीं।",
+   "workload": "सहायक कार्यभार",
+  "noAssistantData": "कोई सहायक डेटा नहीं मिला।",
+  "topCategories": "शीर्ष समस्या श्रेणियाँ",
+  "issues": "समस्याएं"
+},
+"categories": {
+  "Roads": "सड़कें",
+  "Water": "पानी",
+  "Electricity": "बिजली",
+  "Sanitation": "स्वच्छता"
+}
+
+
+
+
+
+
+}

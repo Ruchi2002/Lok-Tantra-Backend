@@ -1,0 +1,195 @@
+{
+  "languageAndRegionalSettings": "Language & Regional Settings",
+  "primaryLanguage": "Primary Language",
+  "dateFormat": "Date Format",
+  "defaultVisitSettings": "Default Visit Settings",
+  "defaultVisitDuration": "Default Visit Duration",
+  "preparationTime": "Preparation Time",
+
+  "english": "English",
+  "hindi": "Hindi",
+  "bengali": "Bengali",
+  "tamil": "Tamil",
+  "telugu": "Telugu",
+
+  "30min": "30 minutes",
+  "1hour": "1 hour",
+  "2hours": "2 hours",
+  "halfDay": "Half day",
+  "fullDay": "Full day",
+  "15min": "15 minutes",
+
+  "settings": {
+    "title": "Settings",
+    "saveChanges": "Save Changes"
+  },
+
+  "profile": {
+    "title": "Profile Photo & Logo",
+    "photoLabel": "MLA/MP Photo",
+    "photoDesc": "Click to upload or drag photo here",
+    "photoSubtext": "Recommended: 400x400px, Max 2MB",
+    "logoLabel": "Party Logo",
+    "logoDesc": "Click to upload or drag logo here",
+    "logoSubtext": "Recommended: 200x200px, Max 1MB",
+    "chooseFile": "Choose File"
+  },
+
+  "sidebar": {
+    "profile": "Profile & Media",
+    "notifications": "Notifications",
+    "preferences": "Preferences",
+    "users": "User Management",
+    "areas": "Constituency Areas",
+    "security": "Security"
+  },
+
+  "notifications": {
+  "whatsappTitle": "WhatsApp Notifications",
+  "enableWhatsapp": "Enable WhatsApp Alerts",
+  "whatsappDesc": "Receive important updates on WhatsApp",
+  "alertTypes": "Alert Types",
+  "visitReminders": "Visit Reminders",
+  "urgentIssues": "Urgent Constituency Issues",
+  "dailySummary": "Daily Activity Summary",
+  "otherTitle": "Other Notification Preferences",
+  "email": "Email Notifications",
+  "sms": "SMS Alerts",
+  "push": "Push Notifications"
+},
+"users": {
+  "title": "Team Management",
+  "add": "Add User",
+  "edit": "Edit User",
+  "name": "Name",
+  "email": "Email",
+  "role": "Role",
+  "status": "Status",
+  "actions": "Actions",
+  "active": "Active",
+  "inactive": "Inactive",
+  "save": "Save",
+  "roles": {
+    "assistant": "Assistant",
+    "analyst": "Analyst"
+  }
+},
+"areas": {
+  "title": "Constituency Areas",
+  "addArea": "Add Area",
+  "newConstituencyPlaceholder": "New Constituency Name",
+  "newSubAreaPlaceholder": "First Sub-area",
+  "subAreaPlaceholder": "Enter sub-area",
+  "addSubArea": "+ Add Sub-area"
+},
+"security": {
+  "password": "Password & Security",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password",
+  "confirmPassword": "Confirm New Password",
+  "currentPasswordPlaceholder": "Enter current password",
+  "newPasswordPlaceholder": "Enter new password",
+  "confirmPasswordPlaceholder": "Confirm new password",
+  "updatePassword": "Update Password",
+  "fillAllFields": "Please fill in all fields.",
+  "passwordMismatch": "New password and confirmation do not match.",
+  "passwordSuccess": "✅ Password updated successfully!",
+  "2fa": "Two-Factor Authentication",
+  "enable2fa": "Enable 2FA",
+  "2faDescription": "Add an extra layer of security to your account",
+  "2faEnabled": "2FA Enabled"
+},
+  "dashboard": {
+    "dashboard": "Dashboard",
+    "issues": "Issues",
+    "visits": "Visits",
+    "meetingPrograms": "Meeting Programs",
+    "lokSabha": "Lok Sabha Sessions",
+    "mplads": "MPLADS Projects",
+    "researchRepository": "Research Repository",
+    "socialMedia": "Social Media Tracker",
+    "areaInsight": "Area Insight",
+    "reports": "Reports",
+    "receivedLetters": "Received Letters",
+    "sentLetters": "Sent Letters",
+    "settings": "Settings",
+    "addAssistants": "Add Assistants",
+    "logout": "Logout"
+  },
+"reports": {
+  "loading": "Loading reports data...",
+  "errorTitle": "Error Loading Data",
+  "retry": "Retry",
+  "heading": "Reports Dashboard",
+  "subheading": "Analyze citizen issues and track resolution progress",
+  "noData": "No data matches your current filters.",
+  "clearFilters": "Clear all filters"
+},
+  "filter": {
+    "heading": "Filters",
+    "active": "Active",
+    "quick": "Quick",
+    "clearAll": "Clear All",
+    "fromDate": "From Date",
+    "toDate": "To Date",
+    "area": "Area",
+    "category": "Category",
+    "status": "Status",
+    "available": "available",
+    "searchAreas": "Search areas...",
+    "searchCategories": "Search categories...",
+    "allAreas": "All Areas",
+    "allCategories": "All Categories",
+    "searchByArea": "Search by area...",
+    "searchByCategory": "Search by category...",
+    "activeFilters": "Active filters",
+    "from": "From",
+    "to": "To",
+    "found": "Found",
+    "totalIssues": "total issues",
+    "across": "across",
+    "areas": "areas",
+    "in": "in",
+    "categories": "categories",
+    "resetAllFilters": "Reset All Filters",
+    "quickFilters": {
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "thisMonth": "This Month"
+    },
+    "statusOptions": {
+      "all": "All",
+      "pending": "Pending",
+      "resolved": "Resolved",
+      "inProgress": "In Progress",
+      "rejected": "Rejected"
+    }
+  },
+  "report": {
+  "daily": "Daily",
+  "monthly": "Monthly",
+  "resolutionTrends": "Resolution Trends",
+  "noResolvedData": "No resolved issues found for selected filters.",
+  "workload": "Assistant Workload",
+  "noAssistantData": "No assistant data found.",
+  "topCategories": "Top Issue Categories",
+  "issues": "Issues"
+},
+"categories": {
+  "Roads": "Roads",
+  "Water": "Water",
+  "Electricity": "Electricity",
+  "Sanitation": "Sanitation"
+}
+
+
+
+
+
+
+
+
+
+
+
+}

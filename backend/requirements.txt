@@ -1,0 +1,12 @@
+fastapi[standard]
+uvicorn
+sqlmodel
+mysql-connector-python
+pydantic
+pydantic-settings
+python-dotenv
+argostranslate
+bcrypt>=4.0.1
+python-jose[cryptography]
+python-multipart
+email-validator
