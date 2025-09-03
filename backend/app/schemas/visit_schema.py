@@ -1,24 +1,26 @@
 from pydantic import BaseModel, field_validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date, time
 
-VALID_VISIT_STATUSES = ["Scheduled", "In Progress", "Completed", "Cancelled"]
+VALID_VISIT_STATUSES = ["Upcoming", "Completed", "Rejected", "Cancelled"]
 
 class VisitBase(BaseModel):
-    citizen_issue_id: str  # Fixed: Changed from int to str (UUID)
-    scheduled_date: datetime
-    scheduled_time: str
-    status: Optional[str] = "Scheduled"
-    notes: Optional[str] = None
+    citizen_issue_id: str
+    assistant_id: Optional[str] = None
+    area_id: Optional[str] = None
+    tenant_id: str
+    visit_reason: Optional[str] = None
     location: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    assistant_id: Optional[str] = None  # Added: Assistant assignment
+    priority: Optional[str] = None
+    visit_date: date
+    visit_time: Optional[time] = None
+    status: Optional[str] = "Upcoming"
+    notes: Optional[str] = None
 
     @field_validator("status")
     @classmethod
     def validate_status(cls, v: Optional[str]) -> str:
-        v = v or "Scheduled"
+        v = v or "Upcoming"
         if v not in VALID_VISIT_STATUSES:
             raise ValueError(f"Invalid status. Allowed: {', '.join(VALID_VISIT_STATUSES)}")
         return v

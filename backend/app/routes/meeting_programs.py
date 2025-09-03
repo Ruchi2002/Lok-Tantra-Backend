@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, and_, or_
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 import json
@@ -22,6 +22,32 @@ from app.models.user import User
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+def parse_participants(participants_json: str, db: Session) -> List[str]:
+    """Parse participants JSON and return list of participant names"""
+    if not participants_json:
+        return []
+    
+    try:
+        # Parse participants JSON - could be list of objects with names or list of user IDs
+        participant_data = json.loads(participants_json)
+        participant_names = []
+        
+        if isinstance(participant_data, list):
+            for participant in participant_data:
+                if isinstance(participant, dict) and 'name' in participant:
+                    # New format: list of objects with names
+                    participant_names.append(participant['name'])
+                elif isinstance(participant, str):
+                    # Old format: list of user IDs
+                    user = db.get(User, participant)
+                    if user:
+                        participant_names.append(user.name)
+        
+        return participant_names
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"Error parsing participants: {e}")
+        return []
 
 router = APIRouter(prefix="/meeting-programs", tags=["Meeting Programs"])
 
@@ -71,18 +97,7 @@ async def create_meeting(
             response_data.creator_name = meeting.creator.name
         
         # Get participant names
-        if meeting.participants:
-            try:
-                participant_ids = json.loads(meeting.participants)
-                participant_names = []
-                for participant_id in participant_ids:
-                    user = db.get(User, participant_id)
-                    if user:
-                        participant_names.append(user.name)
-                response_data.participant_names = participant_names
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"Error parsing participants for meeting {meeting.id}: {e}")
-                response_data.participant_names = []
+        response_data.participant_names = parse_participants(meeting.participants, db)
         
         return response_data
         
@@ -128,18 +143,7 @@ async def get_meeting(
             response_data.creator_name = meeting.creator.name
         
         # Get participant names
-        if meeting.participants:
-            try:
-                participant_ids = json.loads(meeting.participants)
-                participant_names = []
-                for participant_id in participant_ids:
-                    user = db.get(User, participant_id)
-                    if user:
-                        participant_names.append(user.name)
-                response_data.participant_names = participant_names
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"Error parsing participants for meeting {meeting.id}: {e}")
-                response_data.participant_names = []
+        response_data.participant_names = parse_participants(meeting.participants, db)
         
         return response_data
         
@@ -164,6 +168,7 @@ async def get_meetings(
     current_user: User = Depends(get_current_user)
 ):
     """Get all meeting programs with optional filters"""
+    print(f"Getting meetings with filters: {status}, {meeting_type}, {date_from}, {date_to}")
     try:
         # Simplified access - get all meetings without role-based filtering
         meetings = get_all_meeting_programs(
@@ -191,19 +196,8 @@ async def get_meetings(
             if meeting.creator:
                 meeting_response.creator_name = meeting.creator.name
             
-            # Get participant names
-            if meeting.participants:
-                try:
-                    participant_ids = json.loads(meeting.participants)
-                    participant_names = []
-                    for participant_id in participant_ids:
-                        user = db.get(User, participant_id)
-                        if user:
-                            participant_names.append(user.name)
-                    meeting_response.participant_names = participant_names
-                except (json.JSONDecodeError, Exception) as e:
-                    logger.warning(f"Error parsing participants for meeting {meeting.id}: {e}")
-                    meeting_response.participant_names = []
+            # Get participant names from the parsed participants data
+            meeting_response.participant_names = parse_participants(meeting.participants, db)
             
             response_data.append(meeting_response)
         
@@ -255,18 +249,7 @@ async def update_meeting(
             response_data.creator_name = updated_meeting.creator.name
         
         # Get participant names
-        if updated_meeting.participants:
-            try:
-                participant_ids = json.loads(updated_meeting.participants)
-                participant_names = []
-                for participant_id in participant_ids:
-                    user = db.get(User, participant_id)
-                    if user:
-                        participant_names.append(user.name)
-                response_data.participant_names = participant_names
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"Error parsing participants for meeting {updated_meeting.id}: {e}")
-                response_data.participant_names = []
+        response_data.participant_names = parse_participants(updated_meeting.participants, db)
         
         return response_data
         

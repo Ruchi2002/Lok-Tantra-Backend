@@ -169,6 +169,7 @@ def create_visit(db: Session, visit_in: VisitCreate) -> Visit:
     # 3) Build visit with auto-filled fields from issue
     db_visit = Visit(
         citizen_issue_id=issue.id,
+        tenant_id=visit_in.tenant_id,  # Add tenant_id from input
         visit_reason=issue.title or "",
         location=issue.location,
         priority=issue.priority,

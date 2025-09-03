@@ -120,10 +120,9 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
 
         # --- Validate required fields ---
         if not issue_data.get("tenant_id"):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="tenant_id is required"
-            )
+            logger.warning("No tenant_id provided, this should be handled by the route")
+            # Don't raise error here, let the route handle tenant assignment
+            pass
 
         # --- Status validation ---
         try:
@@ -137,52 +136,78 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
         except ValidationError as e:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
-        # --- Handle assigned_to (convert name to ID) ---
-        assigned_to_name = issue_data.pop("assigned_to", None)
+        # --- Handle assigned_to (convert name to ID or handle null) ---
+        assigned_to_value = issue_data.pop("assigned_to", None)
         assigned_user = None
         
-        if assigned_to_name:
-            assigned_user = get_user_by_name_or_id(db, assigned_to_name)
-            if not assigned_user:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-                    detail=f"Assigned user '{assigned_to_name}' does not exist"
-                )
-            issue_data["assigned_to"] = assigned_user.id
+        if assigned_to_value:
+            # Check if it's already a UUID (user ID)
+            try:
+                import uuid
+                uuid.UUID(str(assigned_to_value))
+                # It's a valid UUID, treat as user ID
+                assigned_user = db.get(User, str(assigned_to_value))
+                if assigned_user:
+                    issue_data["assigned_to"] = assigned_user.id
+                else:
+                    logger.warning(f"User with ID {assigned_to_value} not found")
+                    issue_data["assigned_to"] = None
+            except ValueError:
+                # Not a UUID, treat as name
+                assigned_user = get_user_by_name_or_id(db, str(assigned_to_value))
+                if assigned_user:
+                    issue_data["assigned_to"] = assigned_user.id
+                else:
+                    logger.warning(f"User '{assigned_to_value}' not found, setting as unassigned")
+                    issue_data["assigned_to"] = None
         else:
             issue_data["assigned_to"] = None
 
-        # --- Get coordinates from location if not provided ---
+        # --- Handle geocoding with timeout protection ---
         if issue_data.get("location") and not (issue_data.get("latitude") and issue_data.get("longitude")):
             try:
-                lat, lon = get_coordinates(issue_data["location"])
-                if lat and lon:
-                    issue_data["latitude"] = lat
-                    issue_data["longitude"] = lon
-                    logger.info(f"Got coordinates for location '{issue_data['location']}': {lat}, {lon}")
+                # Set a reasonable timeout for geocoding
+                import concurrent.futures
+                
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(get_coordinates, issue_data["location"])
+                    try:
+                        lat, lon = future.result(timeout=10)  # 10 second timeout
+                        if lat and lon:
+                            issue_data["latitude"] = lat
+                            issue_data["longitude"] = lon
+                            logger.info(f"Got coordinates for location '{issue_data['location']}': {lat}, {lon}")
+                        else:
+                            logger.warning(f"Geocoding returned no coordinates for location '{issue_data['location']}'")
+                    except concurrent.futures.TimeoutError:
+                        logger.warning(f"Geocoding timeout for location '{issue_data['location']}' - coordinates can be added manually")
+                    except Exception as e:
+                        logger.warning(f"Geocoding error for location '{issue_data['location']}': {e}")
+                        
             except Exception as e:
                 logger.warning(f"Could not get coordinates for location '{issue_data['location']}': {e}")
+                logger.info("Coordinates can be added manually if needed")
+        else:
+            logger.info("Skipping geocoding - coordinates already provided or no location specified")
 
-        # --- Create the issue first (without GeoJSON) ---
+        # --- Create the issue with GeoJSON in single transaction ---
         db_issue = CitizenIssue(**issue_data)
+        
+        # Generate GeoJSON data before committing
+        try:
+            geojson_data = generate_geojson_for_issue(db_issue, db, assigned_user)
+            if geojson_data:
+                db_issue.geojson_data = geojson_data
+                logger.debug(f"Generated GeoJSON for issue")
+        except Exception as e:
+            logger.warning(f"Could not generate GeoJSON for issue: {e}")
+            # Continue without GeoJSON
+        
         db.add(db_issue)
         db.commit()
         db.refresh(db_issue)
         
         logger.info(f"Created citizen issue with ID: {db_issue.id}")
-        
-        # --- Generate and update GeoJSON with the actual issue ID ---
-        try:
-            geojson_data = generate_geojson_for_issue(db_issue, db, assigned_user)
-            if geojson_data:
-                db_issue.geojson_data = geojson_data
-                db.add(db_issue)
-                db.commit()
-                db.refresh(db_issue)
-                logger.debug(f"Updated GeoJSON for issue {db_issue.id}")
-        except Exception as e:
-            logger.warning(f"Could not generate GeoJSON for issue {db_issue.id}: {e}")
-        
         return db_issue
 
     except HTTPException:
@@ -277,10 +302,6 @@ def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueU
         for key, value in issue_data.items():
             setattr(db_issue, key, value)
         
-        db.add(db_issue)
-        db.commit()
-        db.refresh(db_issue)
-        
         # --- Regenerate GeoJSON if coordinates or other relevant data changed ---
         coordinate_fields = ["latitude", "longitude", "location"]
         relevant_fields = coordinate_fields + ["title", "description", "priority", "status", "assigned_to"]
@@ -290,12 +311,15 @@ def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueU
                 geojson_data = generate_geojson_for_issue(db_issue, db, assigned_user)
                 if geojson_data:
                     db_issue.geojson_data = geojson_data
-                    db.add(db_issue)
-                    db.commit()
-                    db.refresh(db_issue)
                     logger.debug(f"Regenerated GeoJSON for updated issue {db_issue.id}")
             except Exception as e:
                 logger.warning(f"Could not regenerate GeoJSON for updated issue {db_issue.id}: {e}")
+                # Continue without GeoJSON update
+        
+        # --- Commit all changes in single transaction ---
+        db.add(db_issue)
+        db.commit()
+        db.refresh(db_issue)
         
         logger.info(f"Successfully updated citizen issue {issue_id}")
         return db_issue

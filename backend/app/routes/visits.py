@@ -6,6 +6,8 @@ from sqlmodel import Session, text
 import traceback
 
 from database import get_session
+from app.core.auth import get_current_user
+from app.models.user import User
 from app.schemas.visit_schema import VisitCreate, VisitRead, VisitUpdate
 from app.crud.visit_crud import (
     create_visit, get_all_visits, get_visit_by_id, update_visit, delete_visit,
@@ -16,7 +18,10 @@ router = APIRouter(prefix="/visits", tags=["Visits"])
 
 # ✅ Fixed: Move locations endpoint BEFORE the parameterized routes
 @router.get("/locations", response_model=List[str])
-def get_visit_locations_route(db: Session = Depends(get_session)):
+def get_visit_locations_route(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Get unique locations from citizen_issues for the AreaSelector dropdown"""
     try:
         # Use text() for raw SQL to avoid SQLModel issues
@@ -37,7 +42,10 @@ def get_visit_locations_route(db: Session = Depends(get_session)):
 
 # ✅ Fixed: Move eligible-issues endpoint BEFORE parameterized routes
 @router.get("/eligible-issues", response_model=List[dict])
-def eligible_issues_route(db: Session = Depends(get_session)):
+def eligible_issues_route(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Return minimal data for dropdown: id, title, priority, location, assigned_to"""
     try:
         issues = list_eligible_issues(db)
@@ -58,7 +66,10 @@ def eligible_issues_route(db: Session = Depends(get_session)):
 
 # ✅ Fixed: Move assistants endpoint BEFORE parameterized routes
 @router.get("/assistants", response_model=List[dict])
-def assistants_route(db: Session = Depends(get_session)):
+def assistants_route(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Get all users with Assistant role for dropdown"""
     try:
         users = list_assistants(db)
@@ -70,7 +81,10 @@ def assistants_route(db: Session = Depends(get_session)):
 
 # ✅ Fixed: Remove duplicate stats endpoint, keep only one
 @router.get("/stats")
-def visit_stats_route(db: Session = Depends(get_session)):
+def visit_stats_route(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Get visit and issue statistics"""
     try:
         visit_stats = get_visit_stats(db)
@@ -88,7 +102,11 @@ def visit_stats_route(db: Session = Depends(get_session)):
 
 # ✅ Main CRUD endpoints (these should come AFTER the specific endpoints)
 @router.post("/", response_model=VisitRead, status_code=status.HTTP_201_CREATED)
-def create_visit_route(visit_in: VisitCreate, db: Session = Depends(get_session)):
+def create_visit_route(
+    visit_in: VisitCreate, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Create a new visit"""
     try:
         return create_visit(db, visit_in)
@@ -98,7 +116,12 @@ def create_visit_route(visit_in: VisitCreate, db: Session = Depends(get_session)
         raise HTTPException(status_code=500, detail=f"Error creating visit: {str(e)}")
 
 @router.get("/", response_model=List[VisitRead])
-def read_visits_route(skip: int = 0, limit: int = 100, db: Session = Depends(get_session)):
+def read_visits_route(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Get all visits with pagination"""
     try:
         return get_all_visits(db, skip, limit)
@@ -108,12 +131,21 @@ def read_visits_route(skip: int = 0, limit: int = 100, db: Session = Depends(get
         raise HTTPException(status_code=500, detail=f"Error fetching visits: {str(e)}")
 
 @router.get("/{visit_id}", response_model=VisitRead)
-def read_visit_route(visit_id: int, db: Session = Depends(get_session)):
+def read_visit_route(
+    visit_id: int, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Get a specific visit by ID"""
     return get_visit_by_id(db, visit_id)
 
 @router.put("/{visit_id}", response_model=VisitRead)
-def update_visit_route(visit_id: int, visit_update: VisitUpdate, db: Session = Depends(get_session)):
+def update_visit_route(
+    visit_id: int, 
+    visit_update: VisitUpdate, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Update a specific visit"""
     try:
         return update_visit(db, visit_id, visit_update)
@@ -123,7 +155,11 @@ def update_visit_route(visit_id: int, visit_update: VisitUpdate, db: Session = D
         raise HTTPException(status_code=500, detail=f"Error updating visit: {str(e)}")
 
 @router.delete("/{visit_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_visit_route(visit_id: int, db: Session = Depends(get_session)):
+def delete_visit_route(
+    visit_id: int, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Delete a specific visit"""
     if not delete_visit(db, visit_id):
         raise HTTPException(status_code=404, detail="Visit not found")

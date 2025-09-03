@@ -28,7 +28,7 @@ class MeetingProgram(BaseModel, table=True):
     status: str = Field(default="Upcoming", index=True)  # Upcoming, Done, Cancelled
     
     # Participants and attendance
-    participants: Optional[str] = Field(default=None, sa_column=Column(JSON))  # JSON array of participant IDs
+    participants: Optional[str] = Field(default=None, sa_column=Column(Text))  # JSON array stored as TEXT
     expected_attendance: Optional[int] = Field(default=None)
     actual_attendance: Optional[int] = Field(default=None)
     

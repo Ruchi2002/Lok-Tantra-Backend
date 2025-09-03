@@ -300,14 +300,16 @@ def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> Me
     """Get KPIs for meeting programs dashboard"""
     try:
         today = datetime.now().date()
-        week_end = today + timedelta(days=7)
         
         # Base query with tenant filter
         base_query = select(MeetingProgram)
         if tenant_id:
             base_query = base_query.where(MeetingProgram.tenant_id == tenant_id)
         
-        # Total upcoming today
+        # Total meetings
+        total_meetings = len(db.exec(base_query).all())
+        
+        # Upcoming today
         upcoming_today_query = base_query.where(
             and_(
                 MeetingProgram.scheduled_date >= today,
@@ -315,28 +317,12 @@ def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> Me
                 MeetingProgram.status == "Upcoming"
             )
         )
-        total_upcoming_today = len(db.exec(upcoming_today_query).all())
+        upcoming_today = len(db.exec(upcoming_today_query).all())
         
-        # Total upcoming this week
-        upcoming_week_query = base_query.where(
-            and_(
-                MeetingProgram.scheduled_date >= today,
-                MeetingProgram.scheduled_date < week_end,
-                MeetingProgram.status == "Upcoming"
-            )
-        )
-        total_upcoming_week = len(db.exec(upcoming_week_query).all())
-        
-        # Completed and cancelled counts
+        # Completion rate
         completed_query = base_query.where(MeetingProgram.status == "Done")
         completed_count = len(db.exec(completed_query).all())
-        
-        cancelled_query = base_query.where(MeetingProgram.status == "Cancelled")
-        cancelled_count = len(db.exec(cancelled_query).all())
-        
-        # Calculate completed vs cancelled ratio
-        total_processed = completed_count + cancelled_count
-        completed_cancelled_ratio = completed_count / total_processed if total_processed > 0 else 0.0
+        completion_rate = (completed_count / total_meetings * 100) if total_meetings > 0 else 0.0
         
         # Average attendance
         attendance_query = base_query.where(
@@ -374,11 +360,9 @@ def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> Me
             monthly_meetings[month_key] = len(db.exec(month_query).all())
         
         return MeetingProgramKPIs(
-            total_upcoming_today=total_upcoming_today,
-            total_upcoming_week=total_upcoming_week,
-            completed_count=completed_count,
-            cancelled_count=cancelled_count,
-            completed_cancelled_ratio=completed_cancelled_ratio,
+            total_meetings=total_meetings,
+            upcoming_today=upcoming_today,
+            completion_rate=completion_rate,
             average_attendance=average_attendance,
             meetings_by_type=meetings_by_type,
             monthly_meetings=monthly_meetings
@@ -391,6 +375,8 @@ def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> Me
 def get_meeting_program_stats(db: Session, tenant_id: Optional[str] = None) -> MeetingProgramStats:
     """Get detailed statistics for meeting programs"""
     try:
+        today = datetime.now().date()
+        
         # Base query with tenant filter
         base_query = select(MeetingProgram)
         if tenant_id:
@@ -399,51 +385,109 @@ def get_meeting_program_stats(db: Session, tenant_id: Optional[str] = None) -> M
         # Total meetings
         total_meetings = len(db.exec(base_query).all())
         
-        # Status counts
-        upcoming_query = base_query.where(MeetingProgram.status == "Upcoming")
-        upcoming_meetings = len(db.exec(upcoming_query).all())
+        # Status distribution
+        status_distribution = []
+        for status in VALID_STATUSES:
+            status_query = base_query.where(MeetingProgram.status == status)
+            count = len(db.exec(status_query).all())
+            percentage = (count / total_meetings * 100) if total_meetings > 0 else 0.0
+            status_distribution.append({
+                "status": status,
+                "count": count,
+                "percentage": percentage
+            })
         
-        completed_query = base_query.where(MeetingProgram.status == "Done")
-        completed_meetings = len(db.exec(completed_query).all())
+        # Type distribution
+        type_distribution = []
+        for meeting_type in VALID_MEETING_TYPES:
+            type_query = base_query.where(MeetingProgram.meeting_type == meeting_type)
+            count = len(db.exec(type_query).all())
+            percentage = (count / total_meetings * 100) if total_meetings > 0 else 0.0
+            type_distribution.append({
+                "meeting_type": meeting_type,
+                "count": count,
+                "percentage": percentage
+            })
         
-        cancelled_query = base_query.where(MeetingProgram.status == "Cancelled")
-        cancelled_meetings = len(db.exec(cancelled_query).all())
+        # Monthly trends (last 6 months)
+        monthly_trends = []
+        for i in range(6):
+            month_start = today.replace(day=1) - timedelta(days=30*i)
+            month_end = month_start.replace(day=1) + timedelta(days=32)
+            month_end = month_end.replace(day=1) - timedelta(days=1)
+            
+            month_key = month_start.strftime("%B %Y")
+            month_query = base_query.where(
+                and_(
+                    MeetingProgram.scheduled_date >= month_start,
+                    MeetingProgram.scheduled_date <= month_end
+                )
+            )
+            month_meetings = db.exec(month_query).all()
+            
+            total = len(month_meetings)
+            completed = len([m for m in month_meetings if m.status == "Done"])
+            cancelled = len([m for m in month_meetings if m.status == "Cancelled"])
+            
+            monthly_trends.append({
+                "month": month_key,
+                "total": total,
+                "completed": completed,
+                "cancelled": cancelled
+            })
         
-        # Average attendance rate
-        attendance_rate_query = base_query.where(
+        # Attendance metrics
+        attendance_query = base_query.where(
             and_(
-                MeetingProgram.actual_attendance.is_not(None),
                 MeetingProgram.expected_attendance.is_not(None),
+                MeetingProgram.actual_attendance.is_not(None),
                 MeetingProgram.expected_attendance > 0
             )
         )
-        meetings_with_attendance_data = db.exec(attendance_rate_query).all()
-        average_attendance_rate = None
-        if meetings_with_attendance_data:
-            total_rate = 0
-            for meeting in meetings_with_attendance_data:
-                rate = meeting.actual_attendance / meeting.expected_attendance
-                total_rate += rate
-            average_attendance_rate = total_rate / len(meetings_with_attendance_data)
+        meetings_with_attendance = db.exec(attendance_query).all()
         
-        # Most common venue
-        venue_query = base_query.where(MeetingProgram.venue.is_not(None))
-        venues = [m.venue for m in db.exec(venue_query).all() if m.venue]
-        most_common_venue = max(set(venues), key=venues.count) if venues else None
+        avg_expected = None
+        avg_actual = None
+        attendance_rate = None
         
-        # Most common type
-        type_query = base_query.where(MeetingProgram.meeting_type.is_not(None))
-        types = [m.meeting_type for m in db.exec(type_query).all()]
-        most_common_type = max(set(types), key=types.count) if types else None
+        if meetings_with_attendance:
+            total_expected = sum(m.expected_attendance for m in meetings_with_attendance)
+            total_actual = sum(m.actual_attendance for m in meetings_with_attendance)
+            avg_expected = total_expected / len(meetings_with_attendance)
+            avg_actual = total_actual / len(meetings_with_attendance)
+            attendance_rate = (total_actual / total_expected * 100) if total_expected > 0 else 0.0
+        
+        attendance_metrics = {
+            "avg_expected": avg_expected,
+            "avg_actual": avg_actual,
+            "attendance_rate": attendance_rate
+        }
+        
+        # Recent activity (last 10 meetings)
+        recent_query = base_query.order_by(MeetingProgram.created_at.desc()).limit(10)
+        recent_meetings = db.exec(recent_query).all()
+        
+        recent_activity = []
+        for meeting in recent_meetings:
+            activity_type = "created"
+            if meeting.status == "Done":
+                activity_type = "completed"
+            elif meeting.status == "Cancelled":
+                activity_type = "cancelled"
+            
+            recent_activity.append({
+                "type": activity_type,
+                "title": meeting.title,
+                "description": f"Meeting {meeting.status.lower()}",
+                "date": meeting.created_at.strftime("%Y-%m-%d")
+            })
         
         return MeetingProgramStats(
-            total_meetings=total_meetings,
-            upcoming_meetings=upcoming_meetings,
-            completed_meetings=completed_meetings,
-            cancelled_meetings=cancelled_meetings,
-            average_attendance_rate=average_attendance_rate,
-            most_common_venue=most_common_venue,
-            most_common_type=most_common_type
+            status_distribution=status_distribution,
+            type_distribution=type_distribution,
+            monthly_trends=monthly_trends,
+            attendance_metrics=attendance_metrics,
+            recent_activity=recent_activity
         )
         
     except Exception as e:

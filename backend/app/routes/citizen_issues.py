@@ -74,9 +74,18 @@ def check_issue_access(user: User, issue: CitizenIssue) -> bool:
             # In a full implementation, you'd need to join with User table to check creator's tenant
             return True
         
-        elif user_role == "assistant":
-            # Assistants can only access issues they created
-            return issue.created_by == user.id
+        elif user_role in ["assistant", "FieldAgent"]:
+            # Assistants and FieldAgents can access issues they created
+            # Also allow access if they are assigned to the issue
+            if issue.created_by == user.id:
+                logger.debug(f"User {user.id} created issue {issue.id} - access granted")
+                return True
+            elif hasattr(issue, 'assigned_to') and issue.assigned_to == user.id:
+                logger.debug(f"User {user.id} is assigned to issue {issue.id} - access granted")
+                return True
+            else:
+                logger.debug(f"User {user.id} has no access to issue {issue.id} (created_by: {issue.created_by}, assigned_to: {getattr(issue, 'assigned_to', None)})")
+                return False
         
         logger.warning(f"Unknown role '{user_role}' for user {user.id}")
         return False
@@ -394,8 +403,42 @@ def bulk_update_issues(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Bulk update multiple issues"""
+    """Bulk update multiple issues with proper validation"""
     try:
+        # Validate updates parameter
+        if not isinstance(updates, dict):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Updates must be a dictionary"
+            )
+        
+        # Define allowed fields for bulk updates
+        allowed_fields = {
+            'status', 'priority', 'assigned_to', 'category_id', 
+            'area_id', 'action_taken'
+        }
+        
+        # Validate that only allowed fields are being updated
+        invalid_fields = set(updates.keys()) - allowed_fields
+        if invalid_fields:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid fields for bulk update: {', '.join(invalid_fields)}. Allowed fields: {', '.join(allowed_fields)}"
+            )
+        
+        # Validate field values
+        if 'status' in updates and updates['status'] not in ["Open", "In Progress", "Pending", "Resolved"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid status: {updates['status']}. Allowed values: Open, In Progress, Pending, Resolved"
+            )
+        
+        if 'priority' in updates and updates['priority'] not in ["Low", "Medium", "High", "Urgent"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid priority: {updates['priority']}. Allowed values: Low, Medium, High, Urgent"
+            )
+        
         user_role = get_user_role_name(current_user)
         updated_count = 0
         failed_count = 0
@@ -433,6 +476,8 @@ def bulk_update_issues(
             "total_processed": len(issue_ids)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error in bulk update: {e}")
@@ -498,21 +543,115 @@ def create_citizen_issue_route(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new citizen issue - automatically assigns creator"""
-    logger.info(f"Creating citizen issue for user: {current_user.email}")
+    logger.info(f"Creating citizen issue for user: {getattr(current_user, 'email', 'No email')}")
+    logger.info(f"User object type: {type(current_user)}")
+    logger.info(f"User object attributes: {dir(current_user)}")
+    logger.info(f"User ID: {getattr(current_user, 'id', 'No ID')}")
+    logger.info(f"Received issue data: {issue_in.model_dump()}")
     
     try:
         # Ensure the issue is created by the current user
         issue_data = issue_in.model_dump()
         issue_data['created_by'] = current_user.id
         
-        # Add tenant info if available
+        logger.info(f"User tenant_id: {getattr(current_user, 'tenant_id', 'Not set')}")
+        logger.info(f"User role_id: {getattr(current_user, 'role_id', 'Not set')}")
+        
+        # Handle tenant_id - make it optional for users without tenant
         if hasattr(current_user, 'tenant_id') and current_user.tenant_id:
             issue_data['tenant_id'] = current_user.tenant_id
+            logger.info(f"Using user's tenant_id: {current_user.tenant_id}")
+        else:
+            # Check if user has a role that requires tenant assignment
+            user_role = get_user_role_name(current_user)
+            logger.info(f"User role determined: {user_role}")
+            
+            if user_role in ["tenant", "tenant_admin"]:
+                # These roles must have a tenant
+                logger.error(f"User {current_user.id} has role {user_role} but no tenant_id")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Tenant assignment required for this user role"
+                )
+            elif user_role == "super_admin":
+                # Super admin can create issues without tenant (system-wide issues)
+                logger.info(f"Super admin {current_user.id} creating system-wide issue")
+                # For super admin, we need to create a system-wide tenant or use a default
+                from app.models.tenant import Tenant
+                system_tenant = db.exec(select(Tenant).where(Tenant.name == "System")).first()
+                
+                if not system_tenant:
+                    # Create a system tenant if it doesn't exist
+                    system_tenant = Tenant(
+                        name="System",
+                        email="system@admin.com",
+                        password="system_password_hash_placeholder"  # This should be properly hashed in production
+                    )
+                    db.add(system_tenant)
+                    db.commit()
+                    db.refresh(system_tenant)
+                    logger.info(f"Created system tenant {system_tenant.id}")
+                
+                issue_data['tenant_id'] = system_tenant.id
+            else:
+                # For assistants and other roles, try to find a default tenant
+                from app.models.tenant import Tenant
+                default_tenant = db.exec(select(Tenant).where(Tenant.name == "System Default")).first()
+                
+                if not default_tenant:
+                    # Try to find any tenant
+                    any_tenant = db.exec(select(Tenant).where(Tenant.name == "System Default")).first()
+                    if any_tenant:
+                        logger.info(f"Using existing tenant {any_tenant.id} for user {current_user.id}")
+                        issue_data['tenant_id'] = any_tenant.id
+                    else:
+                        logger.error(f"No tenants found in database")
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="No tenant assignment available. Please contact administrator."
+                        )
+                else:
+                    issue_data['tenant_id'] = default_tenant.id
+                    logger.info(f"Using default tenant {default_tenant.id} for user {current_user.id}")
+        
+        logger.info(f"Final issue data before creation: {issue_data}")
+        
+        # Ensure tenant_id is set
+        if not issue_data.get('tenant_id'):
+            logger.error(f"No tenant_id available for user {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tenant assignment required. Please contact administrator."
+            )
+        
+        # Create the issue using only the fields expected by CitizenIssueCreate
+        create_data = {
+            'title': issue_data['title'],
+            'description': issue_data.get('description'),
+            'location': issue_data.get('location'),
+            'latitude': issue_data.get('latitude'),
+            'longitude': issue_data.get('longitude'),
+            'status': issue_data.get('status'),
+            'priority': issue_data.get('priority'),
+            'assigned_to': issue_data.get('assigned_to'),
+            'category_id': issue_data.get('category_id'),
+            'area_id': issue_data.get('area_id'),
+            'action_taken': issue_data.get('action_taken'),
+            'tenant_id': issue_data['tenant_id'],  # Now guaranteed to exist
+            'created_by': current_user.id  # Add the created_by field
+        }
+        
+        logger.info(f"Create data for CitizenIssueCreate: {create_data}")
         
         # Create the issue
-        created_issue = create_citizen_issue(db, CitizenIssueCreate(**issue_data))
+        created_issue = create_citizen_issue(db, CitizenIssueCreate(**create_data))
+        
+        logger.info(f"Successfully created issue with ID: {created_issue.id}")
+        logger.info(f"Issue created_by: {created_issue.created_by}")
+        logger.info(f"Current user ID: {current_user.id}")
         
         # Verify access (defense in depth)
+        logger.info(f"Checking access for user {current_user.id} to issue {created_issue.id}")
         if not check_issue_access(current_user, created_issue):
             logger.error(f"Access denied to created issue {created_issue.id}")
             raise HTTPException(
@@ -520,7 +659,10 @@ def create_citizen_issue_route(
                 detail="Access denied to created issue"
             )
         
-        return transform_issue_for_frontend(created_issue, db)
+        logger.info(f"Access granted, transforming issue for frontend")
+        transformed_issue = transform_issue_for_frontend(created_issue, db)
+        logger.info(f"Successfully transformed issue, returning response")
+        return transformed_issue
         
     except SecurityError as e:
         logger.error(f"Security error creating issue: {e}")
@@ -530,9 +672,11 @@ def create_citizen_issue_route(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error creating citizen issue: {e}", exc_info=True)
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error details: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Failed to create citizen issue"
+            detail=f"Failed to create citizen issue: {str(e)}"
         )
 
 @router.get("/", response_model=List[CitizenIssueRead])
@@ -603,6 +747,52 @@ def test_auth_endpoint(
     except Exception as e:
         logger.error(f"Error in test auth endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/debug/create-issue")
+def debug_create_issue_endpoint(
+    db: Session = Depends(get_session)
+):
+    """Debug endpoint to test issue creation without authentication"""
+    try:
+        # Check if required tables exist
+        from app.models.tenant import Tenant
+        from app.models.user import User
+        
+        # Check tenants
+        tenants = db.exec(select(Tenant)).all()
+        logger.info(f"Found {len(tenants)} tenants in database")
+        
+        # Check users
+        users = db.exec(select(User)).all()
+        logger.info(f"Found {len(users)} users in database")
+        
+        # Try to create a simple tenant if none exists
+        if not tenants:
+            logger.info("No tenants found, creating default tenant")
+            default_tenant = Tenant(
+                name="Default",
+                email="default@example.com",
+                password="default_password_hash"
+            )
+            db.add(default_tenant)
+            db.commit()
+            db.refresh(default_tenant)
+            logger.info(f"Created default tenant: {default_tenant.id}")
+            tenants = [default_tenant]
+        
+        return {
+            "message": "Debug info",
+            "tenants_count": len(tenants),
+            "users_count": len(users),
+            "default_tenant_id": tenants[0].id if tenants else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}", exc_info=True)
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
 
 @router.get("/{issue_id}", response_model=CitizenIssueRead)
 def get_citizen_issue_route(
@@ -796,7 +986,7 @@ def get_citizen_issues_geojson_route(
         )
 
 @router.get("/locations", response_model=List[str])
-def get_unique_locations(
+def get_unique_locations_route(
     db: Session = Depends(get_session),
 ):
     """Get unique locations - PUBLIC ENDPOINT"""
@@ -866,7 +1056,6 @@ def citizen_issues_health_check(db: Session = Depends(get_session)):
 
 # Create a separate public router for endpoints that don't need authentication
 public_router = APIRouter(prefix="/citizen-issues-public", tags=["Citizen Issues - Public"])
-
 @public_router.get("/health", response_model=dict)
 def public_health_check(db: Session = Depends(get_session)):
     """Public health check endpoint without authentication"""

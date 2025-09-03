@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .visit import Visit
     from .Issue_category import IssueCategory
     from .tenant import Tenant
+    from .area import Area
 
 class CitizenIssue(SQLModel, table=True):
     __tablename__ = "citizen_issues"

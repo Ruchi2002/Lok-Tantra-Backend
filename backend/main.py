@@ -65,7 +65,7 @@ async def on_startup():
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(translate_router, tags=["Translation"])
 app.include_router(user_router, tags=["Users"])
-app.include_router(tenant_router, prefix="/tenant", tags=["Tenants"])
+app.include_router(tenant_router, tags=["Tenants"])
 app.include_router(role_router, tags=["Roles"])
 app.include_router(permission_router, tags=["Permissions"])
 app.include_router(role_permission_router, tags=["Role Permissions"])

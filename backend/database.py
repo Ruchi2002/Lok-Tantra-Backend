@@ -35,7 +35,7 @@ DATABASE_URL = (
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,
     pool_size=10,          # The number of connections to maintain in the pool
     max_overflow=20,        # The number of connections to allow beyond pool_size
     pool_recycle=3600,     # Recycle connections after 1 hour

@@ -194,7 +194,7 @@ def get_coordinates(location: str) -> Tuple[Optional[float], Optional[float]]:
     }
 
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=5)
+        response = requests.get(url, params=params, headers=headers, timeout=2)  # Reduced timeout
         response.raise_for_status()
         data = response.json()
         

@@ -101,6 +101,160 @@ def get_all_letters(
             detail=f"Failed to fetch sent letters: {str(e)}"
         )
 
+# Specific endpoints that must come before /{letter_id} routes
+@router.get("/statistics", response_model=SentLetterStatistics)
+def get_statistics(
+    db: Session = Depends(get_session)
+):
+    """Get sent letter statistics for dashboard KPIs"""
+    try:
+        stats = get_sent_letter_statistics(db, None)
+        return stats
+    except Exception as e:
+        logger.error(f"Error fetching sent letter statistics: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch statistics: {str(e)}"
+        )
+
+@router.get("/statistics/overview", response_model=SentLetterStatistics)
+def get_statistics_overview(
+    db: Session = Depends(get_session)
+):
+    """Get sent letter statistics for dashboard KPIs (alternative endpoint)"""
+    try:
+        stats = get_sent_letter_statistics(db, None)
+        return stats
+    except Exception as e:
+        logger.error(f"Error fetching sent letter statistics: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch statistics: {str(e)}"
+        )
+
+@router.get("/categories", response_model=List[str])
+def get_categories():
+    """Get all available letter categories"""
+    return [category.value for category in SentLetterCategory]
+
+@router.get("/priorities", response_model=List[str])
+def get_priorities():
+    """Get all available letter priorities"""
+    return [priority.value for priority in SentLetterPriority]
+
+@router.get("/statuses", response_model=List[str])
+def get_statuses():
+    """Get all available letter statuses"""
+    return [status.value for status in SentLetterStatus]
+
+@router.get("/overdue-followups", response_model=List[SentLetterRead])
+def get_overdue_followups(
+    db: Session = Depends(get_session)
+):
+    """Get all sent letters with overdue follow-ups"""
+    try:
+        letters = get_overdue_followups(db, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching overdue followups: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch overdue followups: {str(e)}"
+        )
+
+@router.get("/followups-due-this-week", response_model=List[SentLetterRead])
+def get_followups_due_this_week(
+    db: Session = Depends(get_session)
+):
+    """Get all sent letters with follow-ups due this week"""
+    try:
+        letters = get_followups_due_this_week(db, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching followups due this week: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch followups due this week: {str(e)}"
+        )
+
+@router.get("/status/{status}", response_model=List[SentLetterRead])
+def get_letters_by_status_route(
+    status: SentLetterStatus,
+    db: Session = Depends(get_session)
+):
+    """Get sent letters by status"""
+    try:
+        letters = get_sent_letters_by_status(db, status, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching sent letters by status {status}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch sent letters: {str(e)}"
+        )
+
+@router.get("/priority/{priority}", response_model=List[SentLetterRead])
+def get_letters_by_priority_route(
+    priority: SentLetterPriority,
+    db: Session = Depends(get_session)
+):
+    """Get sent letters by priority"""
+    try:
+        letters = get_sent_letters_by_priority(db, priority, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching sent letters by priority {priority}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch sent letters: {str(e)}"
+        )
+
+@router.get("/overdue-followups/all", response_model=List[SentLetterRead])
+def get_overdue_followups_all(
+    db: Session = Depends(get_session)
+):
+    """Get all sent letters with overdue follow-ups (alternative endpoint)"""
+    try:
+        letters = get_overdue_followups(db, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching overdue followups: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch overdue followups: {str(e)}"
+        )
+
+@router.get("/followups-due-this-week/all", response_model=List[SentLetterRead])
+def get_followups_due_this_week_all(
+    db: Session = Depends(get_session)
+):
+    """Get all sent letters with follow-ups due this week (alternative endpoint)"""
+    try:
+        letters = get_followups_due_this_week(db, None)
+        return letters
+    except Exception as e:
+        logger.error(f"Error fetching followups due this week: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch followups due this week: {str(e)}"
+        )
+
+@router.get("/categories/list", response_model=List[str])
+def get_categories_list():
+    """Get list of available sent letter categories (alternative endpoint)"""
+    return [category.value for category in SentLetterCategory]
+
+@router.get("/priorities/list", response_model=List[str])
+def get_priorities_list():
+    """Get list of available sent letter priorities (alternative endpoint)"""
+    return [priority.value for priority in SentLetterPriority]
+
+@router.get("/statuses/list", response_model=List[str])
+def get_statuses_list():
+    """Get list of available sent letter statuses (alternative endpoint)"""
+    return [status.value for status in SentLetterStatus]
+
+# Now the /{letter_id} routes
 @router.get("/{letter_id}", response_model=SentLetterRead)
 def get_letter(
     letter_id: int,
@@ -132,7 +286,6 @@ def update_letter(
 ):
     """Update a sent letter"""
     try:
-        # Use a default user ID of 1 for updated_by
         letter = update_sent_letter(db, letter_id, letter_data, 1, None)
         if not letter:
             raise HTTPException(
@@ -169,83 +322,6 @@ def delete_letter(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete sent letter: {str(e)}"
-        )
-
-@router.get("/statistics/overview", response_model=SentLetterStatistics)
-def get_statistics(
-    db: Session = Depends(get_session)
-):
-    """Get sent letter statistics for dashboard KPIs"""
-    try:
-        stats = get_sent_letter_statistics(db, None)
-        return stats
-    except Exception as e:
-        logger.error(f"Error fetching sent letter statistics: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch statistics: {str(e)}"
-        )
-
-@router.get("/status/{status}", response_model=List[SentLetterRead])
-def get_letters_by_status_route(
-    status: SentLetterStatus,
-    db: Session = Depends(get_session)
-):
-    """Get sent letters by status"""
-    try:
-        letters = get_sent_letters_by_status(db, status, None)
-        return letters
-    except Exception as e:
-        logger.error(f"Error fetching sent letters by status {status}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch sent letters: {str(e)}"
-        )
-
-@router.get("/priority/{priority}", response_model=List[SentLetterRead])
-def get_letters_by_priority_route(
-    priority: SentLetterPriority,
-    db: Session = Depends(get_session)
-):
-    """Get sent letters by priority"""
-    try:
-        letters = get_sent_letters_by_priority(db, priority, None)
-        return letters
-    except Exception as e:
-        logger.error(f"Error fetching sent letters by priority {priority}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch sent letters: {str(e)}"
-        )
-
-@router.get("/overdue-followups/all", response_model=List[SentLetterRead])
-def get_overdue_followups_route(
-    db: Session = Depends(get_session)
-):
-    """Get all sent letters with overdue follow-ups"""
-    try:
-        letters = get_overdue_followups(db, None)
-        return letters
-    except Exception as e:
-        logger.error(f"Error fetching overdue followups: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch overdue followups: {str(e)}"
-        )
-
-@router.get("/followups-due-this-week/all", response_model=List[SentLetterRead])
-def get_followups_due_this_week_route(
-    db: Session = Depends(get_session)
-):
-    """Get all sent letters with follow-ups due this week"""
-    try:
-        letters = get_followups_due_this_week(db, None)
-        return letters
-    except Exception as e:
-        logger.error(f"Error fetching followups due this week: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch followups due this week: {str(e)}"
         )
 
 @router.post("/{letter_id}/assign", response_model=SentLetterRead)
@@ -323,17 +399,106 @@ def record_response(
             detail=f"Failed to record response: {str(e)}"
         )
 
-@router.get("/categories/list", response_model=List[str])
-def get_categories():
-    """Get list of available sent letter categories"""
-    return [category.value for category in SentLetterCategory]
+# Additional endpoints that frontend expects
+@router.patch("/{letter_id}/status", response_model=SentLetterRead)
+def update_letter_status(
+    letter_id: int,
+    status_data: dict,
+    db: Session = Depends(get_session)
+):
+    """Update the status of a sent letter"""
+    try:
+        new_status = status_data.get("status")
+        if not new_status:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Status is required"
+            )
+        
+        success = update_sent_letter_status(db, letter_id, new_status, None)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sent letter not found"
+            )
+        
+        # Return the updated letter
+        letter = get_sent_letter(db, letter_id, None)
+        return letter
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating sent letter status {letter_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update sent letter status: {str(e)}"
+        )
 
-@router.get("/priorities/list", response_model=List[str])
-def get_priorities():
-    """Get list of available sent letter priorities"""
-    return [priority.value for priority in SentLetterPriority]
+@router.post("/{letter_id}/response", response_model=SentLetterRead)
+def record_response_main(
+    letter_id: int,
+    response_data: dict,
+    db: Session = Depends(get_session)
+):
+    """Record a response received for a sent letter"""
+    try:
+        response_content = response_data.get("response_content")
+        if not response_content:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Response content is required"
+            )
+        
+        success = record_response_received(db, letter_id, response_content, None)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sent letter not found"
+            )
+        
+        # Return the updated letter
+        letter = get_sent_letter(db, letter_id, None)
+        return letter
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error recording response for sent letter {letter_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record response: {str(e)}"
+        )
 
-@router.get("/statuses/list", response_model=List[str])
-def get_statuses():
-    """Get list of available sent letter statuses"""
-    return [status.value for status in SentLetterStatus]
+@router.patch("/{letter_id}/assign", response_model=SentLetterRead)
+def assign_letter_to_user(
+    letter_id: int,
+    assign_data: dict,
+    db: Session = Depends(get_session)
+):
+    """Assign a sent letter to a user"""
+    try:
+        user_id = assign_data.get("user_id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="User ID is required"
+            )
+        
+        success = assign_sent_letter_to_user(db, letter_id, user_id, None)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sent letter not found"
+            )
+        
+        # Return the updated letter
+        letter = get_sent_letter(db, letter_id, None)
+        return letter
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error assigning sent letter {letter_id} to user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign letter: {str(e)}"
+        )
+

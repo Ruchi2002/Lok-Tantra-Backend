@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlmodel import Session
 from typing import Optional
 from database import get_session
+from app.core.auth import get_current_user
+from app.models.user import User
 from app.models.tenant import Tenant, TenantStatus
 from app.schemas.tenant_schema import TenantCreate, TenantRead, TenantUpdate, TenantLogin
 from app.crud.tenant_crud import (
@@ -31,7 +33,8 @@ def get_all_tenants_route(
     skip: int = 0, 
     limit: int = 100, 
     status_filter: Optional[TenantStatus] = None,
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get all tenants with optional filtering
