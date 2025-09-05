@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useGetCitizenIssuesGeoJsonQuery } from "../../store/api/appApi";
+import { useAuth } from "../../hooks/useAuth";
 import FilterBar from "./FilterBar";
 import HeatmapMap from "./HeatmapMap";
 import InsightsPanel from "./InsightsPanel";
 import dayjs from "dayjs";
 import { useLanguage } from "../../context/LanguageContext";
 import { translateText } from "../../utils/translateText";
-import { useAppData } from '../../context/AppDataContext'; // Import the new hook
 
 const fallbackTexts = {
   en: {
@@ -26,8 +28,20 @@ const fallbackTexts = {
 };
 
 const AreaInsights = () => {
-  // Consume geoJsonData, loading, and error from context
-  const { geoJsonData, geoJsonLoading, geoJsonError } = useAppData(); 
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [selectedArea, setSelectedArea] = useState(null);
+  const [areaStats, setAreaStats] = useState(null);
+
+  // Use RTK Query hook directly instead of AppDataContext
+  const {
+    data: geoJsonData,
+    isLoading: geoJsonLoading,
+    error: geoJsonError,
+    refetch: refetchGeoJson
+  } = useGetCitizenIssuesGeoJsonQuery(undefined, {
+    skip: !isAuthenticated, // Only fetch if authenticated
+  });
 
   const [filter, setFilter] = useState({
     priority: "All",
@@ -35,7 +49,6 @@ const AreaInsights = () => {
     category: "All",
     timeRange: "All",
   });
-  const [selectedArea, setSelectedArea] = useState(null);
   const [loadingText, setLoadingText] = useState("Loading map...");
 
   const { currentLang } = useLanguage();

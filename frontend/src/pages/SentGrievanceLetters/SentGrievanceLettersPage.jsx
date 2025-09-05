@@ -12,17 +12,11 @@ import ResponseModal from './ResponseModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../context/LanguageContext';
 import { fallbackTranslations } from '../../utils/fallbackTranslation';
-import TranslationTest from './TranslationTest';
 
 const SentGrievanceLettersPage = () => {
   const { currentLang } = useLanguage();
   
-  // Debug logging
-  console.log('🌐 Current language:', currentLang);
-  console.log('📚 Fallback translations available:', !!fallbackTranslations);
-  console.log('📚 SentGrievanceLetters translations available:', !!fallbackTranslations?.sentGrievanceLetters);
-  console.log('🔤 Test translation for "title":', fallbackTranslations?.sentGrievanceLetters?.title?.[currentLang]);
-  console.log('🔤 Test translation for "searchPlaceholder":', fallbackTranslations?.sentGrievanceLetters?.searchPlaceholder?.[currentLang]);
+  // Debug logging disabled
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -70,7 +64,6 @@ const SentGrievanceLettersPage = () => {
       const translation = fallbackTranslations?.sentGrievanceLetters?.[key]?.[currentLang] ||
                          fallbackTranslations?.sentGrievanceLetters?.[key]?.en ||
                          key;
-      console.log(`🔤 Translation for key "${key}" in language "${currentLang}":`, translation);
       return translation;
     }
   };

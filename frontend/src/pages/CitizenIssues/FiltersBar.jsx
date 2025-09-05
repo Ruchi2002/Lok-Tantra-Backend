@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, X, MapPin, Calendar, User, Tag } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 import { fallbackTranslations } from "../../utils/fallbackTranslation";
+import { useGetIssueCategoriesQuery, useGetAreasQuery, useGetAvailableUsersQuery } from "../../store/api/appApi";
 
 // Transform function moved here since the old API file was deleted
 const transformIssueData = (rawIssues) => {
@@ -56,11 +57,13 @@ const FilterBar = ({ filters, onChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [translationCache, setTranslationCache] = useState({});
   
-  // Dynamic filter options from API
-  const [categories, setCategories] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
+  // RTK Query hooks for dynamic filter options
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useGetIssueCategoriesQuery();
+  const { data: areas = [], isLoading: areasLoading, error: areasError } = useGetAreasQuery();
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useGetAvailableUsersQuery();
+  
+  const loadingOptions = categoriesLoading || areasLoading || usersLoading;
+  const hasErrors = categoriesError || areasError || usersError;
 
   // Define consistent options with value/label pairs
   const statusOptions = useState(() => [
@@ -168,59 +171,9 @@ const FilterBar = ({ filters, onChange }) => {
     }
   };
 
-  // Fetch dynamic filter options from API
-  const fetchFilterOptions = async () => {
-    setLoadingOptions(true);
-    try {
-      console.log('Fetching filter options...');
-      
-      // Only fetch categories and areas if not authenticated (these are public)
-      const [categoriesData, areasData] = await Promise.all([
-        // citizenIssuesAPI.getCategories().catch((err) => {
-        //   console.error('Error fetching categories:', err);
-        //   return [];
-        // }),
-        // citizenIssuesAPI.getAreas().catch((err) => {
-        //   console.error('Error fetching areas:', err);
-        //   return [];
-        // })
-        // Mock data for now
-        Promise.resolve([{ id: "cat1", name: "Category A" }, { id: "cat2", name: "Category B" }]),
-        Promise.resolve([{ id: "area1", name: "Area 1" }, { id: "area2", name: "Area 2" }])
-      ]);
-      
-      // Only fetch users if authenticated
-      let usersData = [];
-      // if (isAuthenticated) {
-        try {
-          // usersData = await citizenIssuesAPI.getUsers();
-          usersData = [{ id: "user1", name: "User 1" }, { id: "user2", name: "User 2" }];
-        } catch (err) {
-          console.error('Error fetching users:', err);
-          usersData = [];
-        }
-      // }
-      
-      console.log('Filter options loaded:', {
-        categories: categoriesData,
-        areas: areasData,
-        users: usersData
-      });
-      
-      setCategories(categoriesData);
-      setAreas(areasData);
-      setUsers(usersData);
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    } finally {
-      setLoadingOptions(false);
-    }
-  };
-
   useEffect(() => {
     loadTranslations();
-    fetchFilterOptions();
-  }, [loadTranslations, fetchFilterOptions]);
+  }, [loadTranslations]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -248,28 +201,28 @@ const FilterBar = ({ filters, onChange }) => {
     filters.assistant !== "All" ||
     filters.search !== "";
 
-  // Show login prompt if not authenticated
-  // if (!isAuthenticated) {
-  //   return (
-  //     <div className="bg-white p-3 sm:p-4 lg:p-6 rounded-xl shadow-md mb-4 sm:mb-6">
-  //       <div className="text-center py-8">
-  //         <div className="text-gray-500 text-lg mb-4">🔐</div>
-  //         <h3 className="text-lg font-medium text-gray-900 mb-2">
-  //           Authentication Required
-  //         </h3>
-  //         <p className="text-gray-600 mb-4">
-  //           Please log in to access advanced filtering options and user assignments.
-  //         </p>
-  //         <button
-  //           onClick={() => window.location.href = '/login'}
-  //           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-  //         >
-  //           Go to Login
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // Show error state if API calls fail
+  if (hasErrors) {
+    return (
+      <div className="bg-white p-3 sm:p-4 lg:p-6 rounded-xl shadow-md mb-4 sm:mb-6">
+        <div className="text-center py-8">
+          <div className="text-red-500 text-lg mb-4">⚠️</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Error Loading Filter Options
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Some filter options could not be loaded. Please refresh the page or try again later.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-3 sm:p-4 lg:p-6 rounded-xl shadow-md mb-4 sm:mb-6">
@@ -290,7 +243,7 @@ const FilterBar = ({ filters, onChange }) => {
             onChange={handleInputChange}
             placeholder={labels.searchPlaceholder}
             className={`${inputClasses} w-full`}
-            disabled={isLoading}
+            disabled={isLoading || loadingOptions}
             aria-label={labels.searchLabel}
           />
         </div>

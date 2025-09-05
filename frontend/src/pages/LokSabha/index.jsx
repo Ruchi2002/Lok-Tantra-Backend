@@ -19,9 +19,12 @@ import SessionForm from './components/SessionForm';
 import SessionStats from './components/SessionStats';
 import SessionCalendar from './components/SessionCalendar';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const LokSabhaSessionTracker = () => {
   const { user } = useAuth();
+  const { t, tSection } = useTranslation();
+  const tLokSabha = tSection('dashboard'); // Using dashboard section for Lok Sabha translations
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -190,7 +193,7 @@ const LokSabhaSessionTracker = () => {
   };
 
   const handleDeleteSession = async (sessionId) => {
-    if (window.confirm('Are you sure you want to delete this session?')) {
+    if (window.confirm(t('deleteConfirmation'))) {
       try {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -246,8 +249,8 @@ const LokSabhaSessionTracker = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Lok Sabha Session Tracker</h1>
-              <p className="text-gray-600 mt-1">Track parliamentary performance and session details</p>
+              <h1 className="text-2xl font-bold text-gray-900">{tLokSabha('lokSabhaSessionTracker')}</h1>
+              <p className="text-gray-600 mt-1">{tLokSabha('trackParliamentaryPerformance')}</p>
             </div>
             
             <div className="flex items-center gap-3">
@@ -259,7 +262,7 @@ const LokSabhaSessionTracker = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                New Session
+                {tLokSabha('newSession')}
               </button>
               
               <button
@@ -282,7 +285,7 @@ const LokSabhaSessionTracker = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search sessions..."
+                placeholder={tLokSabha('searchSessions')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -294,9 +297,9 @@ const LokSabhaSessionTracker = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Completed">Completed</option>
+              <option value="All">{tLokSabha('allStatus')}</option>
+              <option value="Active">{tLokSabha('active')}</option>
+              <option value="Completed">{tLokSabha('completed')}</option>
             </select>
             
             <select
@@ -304,9 +307,9 @@ const LokSabhaSessionTracker = () => {
               onChange={(e) => setQuestionTypeFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
-              <option value="All">All Question Types</option>
-              <option value="Starred">Starred Questions</option>
-              <option value="Unstarred">Unstarred Questions</option>
+              <option value="All">{tLokSabha('allQuestionTypes')}</option>
+              <option value="Starred">{tLokSabha('starredQuestions')}</option>
+              <option value="Unstarred">{tLokSabha('unstarredQuestions')}</option>
             </select>
             
             <div className="flex items-center gap-2">
@@ -317,7 +320,7 @@ const LokSabhaSessionTracker = () => {
                     ? 'bg-blue-100 text-blue-600' 
                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
-                title="List View"
+                title={tLokSabha('listView')}
               >
                 <List className="w-5 h-5" />
               </button>
@@ -329,7 +332,7 @@ const LokSabhaSessionTracker = () => {
                     ? 'bg-blue-100 text-blue-600' 
                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
-                title="Calendar View"
+                title={tLokSabha('calendarView')}
               >
                 <Calendar className="w-5 h-5" />
               </button>
@@ -341,7 +344,7 @@ const LokSabhaSessionTracker = () => {
                     ? 'bg-blue-100 text-blue-600' 
                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                 }`}
-                title="Statistics View"
+                title={tLokSabha('statisticsView')}
               >
                 <BarChart3 className="w-5 h-5" />
               </button>
@@ -357,11 +360,11 @@ const LokSabhaSessionTracker = () => {
                 <div className="text-gray-400 mb-4">
                   <FileText className="w-16 h-16 mx-auto" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{tLokSabha('noSessionsFound')}</h3>
                 <p className="text-gray-600 mb-6">
                   {searchTerm || statusFilter !== 'All' || questionTypeFilter !== 'All' 
-                    ? 'Try adjusting your search or filters'
-                    : 'Get started by creating your first session'
+                    ? tLokSabha('tryAdjustingSearch')
+                    : tLokSabha('getStartedCreatingSession')
                   }
                 </p>
                 {!searchTerm && statusFilter === 'All' && questionTypeFilter === 'All' && (
@@ -373,7 +376,7 @@ const LokSabhaSessionTracker = () => {
                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    Create Session
+                    {tLokSabha('createSession')}
                   </button>
                 )}
               </div>

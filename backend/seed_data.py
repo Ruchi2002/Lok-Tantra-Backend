@@ -15,6 +15,7 @@ from app.models.role_permission import RolePermission
 from app.models.citizen_issues import CitizenIssue
 from app.models.visit import Visit
 from app.models.visit_issue import VisitIssue
+from app.models.meeting_program import MeetingProgram
 from database import engine
 import bcrypt
 from datetime import datetime, date, timedelta
@@ -118,11 +119,11 @@ def seed_initial_data():
             ("user.delete", "Delete Users", PermissionCategory.USER, "Delete users"),
             
             # Issue permissions
-            ("issue.view", "View Issues", PermissionCategory.ISSUE, "View citizen issues"),
-            ("issue.create", "Create Issues", PermissionCategory.ISSUE, "Create new issues"),
-            ("issue.edit", "Edit Issues", PermissionCategory.ISSUE, "Edit issue details"),
-            ("issue.assign", "Assign Issues", PermissionCategory.ISSUE, "Assign issues to users"),
-            ("issue.resolve", "Resolve Issues", PermissionCategory.ISSUE, "Mark issues as resolved"),
+            ("view_issues", "View Issues", PermissionCategory.ISSUE, "View citizen issues"),
+            ("create_issues", "Create Issues", PermissionCategory.ISSUE, "Create new issues"),
+            ("edit_issues", "Edit Issues", PermissionCategory.ISSUE, "Edit issue details"),
+            ("assign_issues", "Assign Issues", PermissionCategory.ISSUE, "Assign issues to users"),
+            ("delete_issues", "Delete Issues", PermissionCategory.ISSUE, "Delete issues"),
             
             # Visit permissions
             ("visit.view", "View Visits", PermissionCategory.VISIT, "View scheduled visits"),
@@ -176,7 +177,7 @@ def seed_initial_data():
         
         # Member gets basic permissions
         member_permissions = [
-            "issue.view", "issue.create", "visit.view", "visit.create", 
+            "view_issues", "create_issues", "visit.view", "visit.create", 
             "area.view", "report.view"
         ]
         for perm_name in member_permissions:
@@ -186,7 +187,7 @@ def seed_initial_data():
         
         # Field agent gets field-specific permissions
         field_permissions = [
-            "issue.view", "issue.edit", "visit.view", "visit.edit", "visit.complete",
+            "view_issues", "edit_issues", "visit.view", "visit.edit", "visit.complete",
             "area.view", "report.view"
         ]
         for perm_name in field_permissions:
@@ -502,6 +503,70 @@ def seed_initial_data():
         session.commit()
         print(f"✅ Created {len(visits)} visits")
         
+        # 10. Create meeting programs
+        print("Creating meeting programs...")
+        meeting_types = ["Government", "NGO", "Public"]
+        meeting_statuses = ["Upcoming", "Done", "Cancelled"]
+        meeting_titles = [
+            "Monthly Constituency Review",
+            "Public Grievance Hearing",
+            "Infrastructure Development Meeting",
+            "Education Committee Session",
+            "Healthcare Initiative Discussion",
+            "Agricultural Support Meeting",
+            "Women Empowerment Workshop",
+            "Youth Development Program",
+            "Senior Citizen Welfare Meeting",
+            "Environmental Conservation Discussion"
+        ]
+        
+        meeting_programs = []
+        for i in range(20):  # Create 20 sample meetings
+            tenant_name = random.choice(list(tenants.keys()))
+            tenant = tenants[tenant_name]
+            tenant_users = [u for u in users.values() if u.tenant_id == tenant.id]
+            
+            if not tenant_users:
+                continue
+                
+            creator = random.choice(tenant_users)
+            assigned_user = random.choice(tenant_users) if random.random() > 0.3 else None
+            
+            # Random date within next 60 days
+            meeting_date = date.today() + timedelta(days=random.randint(-30, 60))
+            start_time = datetime.strptime(f"{random.randint(9, 17)}:{random.randint(0, 59):02d}", "%H:%M").time()
+            end_time = datetime.strptime(f"{random.randint(18, 20)}:{random.randint(0, 59):02d}", "%H:%M").time()
+            
+            # Create participants list
+            participants = []
+            num_participants = random.randint(2, 8)
+            for _ in range(num_participants):
+                participant = random.choice(tenant_users)
+                participants.append({"name": participant.name, "email": participant.email})
+            
+            meeting = MeetingProgram(
+                title=random.choice(meeting_titles),
+                description=f"Meeting to discuss {random.choice(meeting_titles).lower()}",
+                meeting_type=random.choice(meeting_types),
+                status=random.choice(meeting_statuses),
+                scheduled_date=meeting_date,
+                start_time=start_time,
+                end_time=end_time,
+                venue=f"Conference Room {random.randint(1, 5)}, {tenant_name}",
+                agenda=f"1. Welcome and introductions\n2. Review of previous minutes\n3. Discussion on agenda items\n4. Action items and next steps",
+                participants=json.dumps(participants),
+                created_by=creator.id,
+                user_id=assigned_user.id if assigned_user else None,
+                tenant_id=tenant.id,
+                priority=random.choice(["Low", "Medium", "High"]),
+                notes=f"Meeting scheduled for {meeting_date.strftime('%B %d, %Y')}"
+            )
+            session.add(meeting)
+            meeting_programs.append(meeting)
+        
+        session.commit()
+        print(f"✅ Created {len(meeting_programs)} meeting programs")
+        
         print("\n🎉 Comprehensive seeding completed!")
         print("\n📋 Test Data Summary:")
         print(f"   • {len(tenants)} Tenants")
@@ -511,6 +576,7 @@ def seed_initial_data():
         print(f"   • {len(permissions)} Permissions")
         print(f"   • {len(issues)} Citizen Issues")
         print(f"   • {len(visits)} Visits")
+        print(f"   • {len(meeting_programs)} Meeting Programs")
         
         print("\n🔑 Default Login Credentials:")
         for tenant_name, tenant_data in tenants_data.items():

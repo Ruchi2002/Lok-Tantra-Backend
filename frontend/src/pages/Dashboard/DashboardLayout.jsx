@@ -1,52 +1,69 @@
 // layouts/DashboardLayout.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./component/Sidebar";
 import { LogoutButton } from "../../components/LogoutButton";
 import { useAuth } from "../../hooks/useAuth";
+import LanguageToggle from "../../components/LanguageToggle";
 
 const DashboardLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
+  // Handle responsive sidebar behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        // Desktop: sidebar open by default
+        setSidebarOpen(true);
+      } else {
+        // Mobile/Tablet: sidebar closed by default
+        setSidebarOpen(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex bg-gray-50">
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen lg:ml-0">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="mx-auto px-6 py-4">
+        <header className="bg-white shadow-sm border-b p-6">
+          <div className="mx-auto">
             <div className="flex items-center justify-between">
               {/* Left Logo */}
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="lg:hidden p-2 rounded hover:bg-gray-100"
+                  className="lg:hidden p-2 rounded hover:bg-gray-100 transition-colors"
+                  aria-label="Toggle sidebar"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <div className="flex items-center space-x-3">
-                  <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-red-700 font-bold text-2xl">सं</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-800">
-                    SAMPARC INDIA
-                  </div>
-                </div>
+                
               </div>
 
               {/* Center Logo */}
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-white font-bold text-2xl">क</span>
+                    <span className="text-white font-bold text-xl">क</span>
                   </div>
                   <div className="text-lg font-bold text-gray-800">
                     LOK TANTRA APP
@@ -56,15 +73,8 @@ const DashboardLayout = () => {
 
               {/* Right User Section */}
               <div className="flex items-center space-x-4">
-                {/* Notifications */}
-                <button className="p-2 rounded hover:bg-gray-100 relative">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    3
-                  </span>
-                </button>
+                {/* Language Toggle */}
+                {/* <LanguageToggle /> */}
 
                 {/* User Info */}
                 <div className="flex items-center space-x-3">
@@ -83,6 +93,8 @@ const DashboardLayout = () => {
                   </div>
                 </div>
 
+                
+
                 {/* Logout Button */}
                 <LogoutButton 
                   className="p-2 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
@@ -98,7 +110,7 @@ const DashboardLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 h-[calc(100vh-64px)] overflow-auto">
           <Outlet />
         </main>
       </div>

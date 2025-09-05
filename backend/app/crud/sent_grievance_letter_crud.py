@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 def create_sent_grievance_letter(
     db: Session, 
     letter_data: SentGrievanceLetterCreate, 
-    user_id: int, 
-    tenant_id: Optional[int] = None
+    user_id: str, 
+    tenant_id: Optional[str] = None
 ) -> SentGrievanceLetter:
     """Create a new sent grievance letter"""
     try:
@@ -60,8 +60,8 @@ def create_sent_grievance_letter(
 
 def get_sent_grievance_letter(
     db: Session, 
-    letter_id: int, 
-    tenant_id: Optional[int] = None
+    letter_id: str, 
+    tenant_id: Optional[str] = None
 ) -> Optional[SentGrievanceLetter]:
     """Get a specific sent grievance letter by ID"""
     try:
@@ -77,7 +77,7 @@ def get_all_sent_grievance_letters(
     db: Session, 
     skip: int = 0, 
     limit: int = 100, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentGrievanceLetter]:
     """Get all sent grievance letters with pagination"""
     try:
@@ -93,7 +93,7 @@ def get_all_sent_grievance_letters(
 def get_filtered_sent_grievance_letters(
     db: Session, 
     filters: SentGrievanceLetterFilters, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """Get filtered sent grievance letters with pagination"""
     try:
@@ -165,10 +165,10 @@ def get_filtered_sent_grievance_letters(
 
 def update_sent_grievance_letter(
     db: Session, 
-    letter_id: int, 
+    letter_id: str, 
     letter_data: SentGrievanceLetterUpdate, 
-    user_id: int, 
-    tenant_id: Optional[int] = None
+    user_id: str, 
+    tenant_id: Optional[str] = None
 ) -> Optional[SentGrievanceLetter]:
     """Update a sent grievance letter"""
     try:
@@ -200,8 +200,8 @@ def update_sent_grievance_letter(
 
 def delete_sent_grievance_letter(
     db: Session, 
-    letter_id: int, 
-    tenant_id: Optional[int] = None
+    letter_id: str, 
+    tenant_id: Optional[str] = None
 ) -> bool:
     """Delete a sent grievance letter"""
     try:
@@ -224,7 +224,7 @@ def delete_sent_grievance_letter(
 
 def get_sent_grievance_letter_statistics(
     db: Session, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> SentGrievanceLetterStatistics:
     """Get statistics for sent grievance letters"""
     try:
@@ -356,7 +356,7 @@ def get_sent_grievance_letter_statistics(
 def get_sent_grievance_letters_by_status(
     db: Session, 
     status: SentGrievanceLetterStatus, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentGrievanceLetter]:
     """Get sent grievance letters by status"""
     try:
@@ -372,7 +372,7 @@ def get_sent_grievance_letters_by_status(
 def get_sent_grievance_letters_by_priority(
     db: Session, 
     priority: SentGrievanceLetterPriority, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentGrievanceLetter]:
     """Get sent grievance letters by priority"""
     try:
@@ -387,7 +387,7 @@ def get_sent_grievance_letters_by_priority(
 
 def get_overdue_followups(
     db: Session, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentGrievanceLetter]:
     """Get overdue follow-up letters"""
     try:
@@ -408,7 +408,7 @@ def get_overdue_followups(
 
 def get_followups_due_this_week(
     db: Session, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentGrievanceLetter]:
     """Get follow-ups due this week"""
     try:
@@ -431,10 +431,10 @@ def get_followups_due_this_week(
 
 def assign_sent_grievance_letter_to_user(
     db: Session, 
-    letter_id: int, 
+    letter_id: str, 
     assigned_user_id: int, 
-    user_id: int, 
-    tenant_id: Optional[int] = None
+    user_id: str, 
+    tenant_id: Optional[str] = None
 ) -> Optional[SentGrievanceLetter]:
     """Assign a sent grievance letter to a user"""
     try:
@@ -462,10 +462,10 @@ def assign_sent_grievance_letter_to_user(
 
 def update_sent_grievance_letter_status(
     db: Session, 
-    letter_id: int, 
+    letter_id: str, 
     status: SentGrievanceLetterStatus, 
-    user_id: int, 
-    tenant_id: Optional[int] = None
+    user_id: str, 
+    tenant_id: Optional[str] = None
 ) -> Optional[SentGrievanceLetter]:
     """Update the status of a sent grievance letter"""
     try:
@@ -497,10 +497,10 @@ def update_sent_grievance_letter_status(
 
 def record_response_received(
     db: Session, 
-    letter_id: int, 
+    letter_id: str, 
     response_content: str, 
-    user_id: int, 
-    tenant_id: Optional[int] = None
+    user_id: str, 
+    tenant_id: Optional[str] = None
 ) -> Optional[SentGrievanceLetter]:
     """Record that a response has been received for a sent grievance letter"""
     try:

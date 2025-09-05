@@ -1,6 +1,6 @@
 // src/pages/TenantPage.jsx
 import React, { useState } from "react";
-import { Plus, Edit2, Trash2, Power } from "lucide-react";
+import { Plus, Edit2, Trash2, Power, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { 
   useGetTenantsQuery, 
   useCreateTenantMutation, 
@@ -11,6 +11,8 @@ import {
 const TenantPage = () => {
   const [assistants, setAssistants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [showPasswords, setShowPasswords] = useState({});
+  const [copiedItems, setCopiedItems] = useState({});
 
   const [open, setOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
@@ -22,11 +24,99 @@ const TenantPage = () => {
     status: "active",
   });
 
-  // RTK Query hooks
+  // RTK Query hooks - using regular query for now, will fetch with passwords separately
   const { data: tenants = [], isLoading, error } = useGetTenantsQuery();
   const [createTenant, { isLoading: isCreating }] = useCreateTenantMutation();
   const [updateTenant, { isLoading: isUpdating }] = useUpdateTenantMutation();
   const [deleteTenant, { isLoading: isDeleting }] = useDeleteTenantMutation();
+
+  // State for tenants with passwords
+  const [tenantsWithPasswords, setTenantsWithPasswords] = useState([]);
+
+  // Fetch tenants with passwords
+  const fetchTenantsWithPasswords = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/super-admin/all-tenants-with-passwords', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTenantsWithPasswords(data);
+      }
+    } catch (error) {
+      console.error('Error fetching tenants with passwords:', error);
+    }
+  };
+
+  // Password visibility toggle
+  const togglePasswordVisibility = (id) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Copy password to clipboard
+  const copyPassword = async (password, id) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      setCopiedItems(prev => ({
+        ...prev,
+        [id]: true
+      }));
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedItems(prev => ({
+          ...prev,
+          [id]: false
+        }));
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy password:', error);
+    }
+  };
+
+  // Password display component
+  const PasswordDisplay = ({ password, id }) => {
+    const isVisible = showPasswords[id];
+    const isCopied = copiedItems[id];
+    
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+          {isVisible ? password : '••••••••'}
+        </span>
+        <button
+          onClick={() => togglePasswordVisibility(id)}
+          className="p-1 hover:bg-gray-200 rounded transition-colors"
+          title={isVisible ? "Hide password" : "Show password"}
+        >
+          {isVisible ? (
+            <EyeOff className="w-4 h-4 text-gray-600" />
+          ) : (
+            <Eye className="w-4 h-4 text-gray-600" />
+          )}
+        </button>
+        <button
+          onClick={() => copyPassword(password, id)}
+          className="p-1 hover:bg-gray-200 rounded transition-colors"
+          title="Copy password"
+        >
+          {isCopied ? (
+            <Check className="w-4 h-4 text-green-600" />
+          ) : (
+            <Copy className="w-4 h-4 text-gray-600" />
+          )}
+        </button>
+      </div>
+    );
+  };
+
+  // Fetch tenants with passwords on component mount
+  React.useEffect(() => {
+    fetchTenantsWithPasswords();
+  }, []);
 
   // Fetch assistants for a tenant (this might need a separate API endpoint)
   const fetchAssistants = async (tenantId) => {
@@ -121,17 +211,56 @@ const TenantPage = () => {
             <th className="border p-2">Name</th>
             <th className="border p-2">Email</th>
             <th className="border p-2">Phone</th>
+            <th className="border p-2">Password</th>
             <th className="border p-2">Status</th>
             <th className="border p-2">Actions</th>
             <th className="border p-2">Assistants</th>
           </tr>
         </thead>
         <tbody>
-          {tenants.map((tenant) => (
+          {tenantsWithPasswords.length > 0 ? tenantsWithPasswords.map((tenant) => (
             <tr key={tenant.id}>
               <td className="border p-2">{tenant.name}</td>
               <td className="border p-2">{tenant.email}</td>
               <td className="border p-2">{tenant.phone}</td>
+              <td className="border p-2">
+                <PasswordDisplay password={tenant.plain_password} id={tenant.id} />
+              </td>
+              <td className="border p-2">
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                  tenant.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {tenant.status}
+                </span>
+              </td>
+              <td className="border p-2 flex gap-2">
+                <button onClick={() => handleEdit(tenant)} className="p-1 text-blue-600 hover:bg-gray-100 rounded">
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(tenant.id)} className="p-1 text-red-600 hover:bg-gray-100 rounded">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleToggleStatus(tenant)} className="p-1 text-green-600 hover:bg-gray-100 rounded">
+                  <Power className="w-4 h-4" />
+                </button>
+              </td>
+              <td className="border p-2">
+                <button
+                  onClick={() => fetchAssistants(tenant.id)}
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  View Assistants
+                </button>
+              </td>
+            </tr>
+          )) : tenants.map((tenant) => (
+            <tr key={tenant.id}>
+              <td className="border p-2">{tenant.name}</td>
+              <td className="border p-2">{tenant.email}</td>
+              <td className="border p-2">{tenant.phone}</td>
+              <td className="border p-2 text-gray-400">Loading...</td>
               <td className="border p-2">{tenant.status}</td>
               <td className="border p-2 flex gap-2">
                 <button onClick={() => handleEdit(tenant)} className="p-1 text-blue-600 hover:bg-gray-100 rounded">

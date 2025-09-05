@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../hooks/useTranslation';
 import LeftColumn from './LeftColumn';
 import MainCards from './MainCards';
 import GrievanceDashboard from './GrievanceDashboard';
@@ -11,24 +11,21 @@ import TodayMeetings from './TodayMeetings';
 
 const Dashboard = () => {
   console.log('New Dashboard2 component rendered');
-  const navigate = useNavigate();
+  const { t, tSection } = useTranslation();
+  const tDashboard = tSection('dashboard');
 
-  const handleLogin = () => {
-    navigate('/login');
-  };
 
-  const handleBackToHome = () => {
-    navigate('/');
-  };
 
   return (
-    <div className="bg-gray-100">
+    <div className="">
+      
+
       {/* Main Content Grid */}
-      <div className="px-6 py-8">
+      <div className="px-6 py-8 h-full">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Left Column - Top Works */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1 md:row-start-1 md:row-end-5 ">
             <LeftColumn />
           </div>
 

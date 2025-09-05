@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGetCitizenIssuesQuery } from '../../store/api/appApi';
+import { useGetCitizenIssuesQuery, useGetFieldAgentIssuesQuery } from '../../store/api/appApi';
+import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const GrievanceDashboard = () => {
   console.log('GrievanceDashboard component rendered');
   const navigate = useNavigate();
+  const { user, isFieldAgent, hasRole } = useAuth();
+  const { t, tSection } = useTranslation();
+  const tDashboard = tSection('dashboard');
   const [stats, setStats] = useState({
     total: 0,
     solved: 0,
@@ -12,13 +17,16 @@ const GrievanceDashboard = () => {
     onReminder: 0
   });
 
-  // Use RTK Query hook
+  // Determine which API endpoint to use based on user role
+  const isAgent = isFieldAgent() || hasRole("FieldAgent") || hasRole("field_agent");
+  
+  // Use appropriate RTK Query hook based on user role
   const { 
     data: issues = [], 
     isLoading: loading, 
     error, 
     refetch: refetchIssues 
-  } = useGetCitizenIssuesQuery();
+  } = isAgent ? useGetFieldAgentIssuesQuery() : useGetCitizenIssuesQuery();
 
   // Calculate statistics when issues data changes
   React.useEffect(() => {
@@ -88,10 +96,10 @@ const GrievanceDashboard = () => {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 md:col-span-2 border-l-4 border-blue-500">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Grievance Dashboard
+          {tDashboard('grievanceDashboard')}
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Overview of all citizen issues and their current status
+          {tDashboard('overviewOfAllCitizenIssues')}
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, index) => (
@@ -109,10 +117,10 @@ const GrievanceDashboard = () => {
     return (
       <div className="bg-white rounded-xl shadow-md p-6 md:col-span-2 border-l-4 border-red-500">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Grievance Dashboard
+          {tDashboard('grievanceDashboard')}
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Overview of all citizen issues and their current status
+          {tDashboard('overviewOfAllCitizenIssues')}
         </p>
         <div className="text-center p-8">
           <div className="mb-4">
@@ -125,7 +133,7 @@ const GrievanceDashboard = () => {
             onClick={handleRetry}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
-            Try Again
+            {t('tryAgain')}
           </button>
         </div>
       </div>
@@ -147,10 +155,13 @@ const GrievanceDashboard = () => {
       aria-label="Navigate to Citizen Issues page"
     >
       <h3 className="text-lg font-semibold text-gray-800 mb-2">
-        Grievance Dashboard
+        {tDashboard('grievanceDashboard')}
       </h3>
       <p className="text-sm text-gray-600 mb-4">
-        Overview of all citizen issues and their current status
+        {isAgent 
+          ? tDashboard('overviewOfYourAssignedCitizenIssues')
+          : tDashboard('overviewOfAllCitizenIssues')
+        }
       </p>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -159,7 +170,7 @@ const GrievanceDashboard = () => {
             {stats.total.toLocaleString()}
           </div>
           <div className="text-sm text-blue-600 font-semibold">
-            Total Cases
+            {tDashboard('totalCases')}
           </div>
         </div>
         
@@ -168,7 +179,7 @@ const GrievanceDashboard = () => {
             {stats.solved.toLocaleString()}
           </div>
           <div className="text-sm text-green-600 font-semibold">
-            Solved
+            {tDashboard('solved')}
           </div>
         </div>
         
@@ -177,7 +188,7 @@ const GrievanceDashboard = () => {
             {stats.pending.toLocaleString()}
           </div>
           <div className="text-sm text-orange-600 font-semibold">
-            Pending
+            {tDashboard('pending')}
           </div>
         </div>
         
@@ -186,7 +197,7 @@ const GrievanceDashboard = () => {
             {stats.onReminder.toLocaleString()}
           </div>
           <div className="text-sm text-red-600 font-semibold">
-            On Reminder
+            {tDashboard('onReminder')}
           </div>
                  </div>
        </div>

@@ -21,7 +21,7 @@ class MeetingProgramBase(BaseModel):
     status: str = Field(default="Upcoming")
     
     # Participants and attendance
-    participants: Optional[List[Dict[str, Any]]] = Field(None)  # Changed to List[Dict] to handle JSON data
+    participants: Optional[List[Dict[str, Any]]] = Field(None)  # List of objects with 'name' field for manual entry
     expected_attendance: Optional[int] = Field(None, ge=0)
     actual_attendance: Optional[int] = Field(None, ge=0)
     
@@ -33,6 +33,7 @@ class MeetingProgramBase(BaseModel):
     
     # Foreign keys
     tenant_id: Optional[str] = Field(None)
+    user_id: Optional[str] = Field(None)  # For assigning users to meetings
     
     @validator('meeting_type')
     def validate_meeting_type(cls, v):
@@ -68,6 +69,7 @@ class MeetingProgramBase(BaseModel):
 
 class MeetingProgramCreate(MeetingProgramBase):
     created_by: Optional[str] = Field(None)
+    user_id: Optional[str] = Field(None)  # For assigning users to meetings
 
 class MeetingProgramRead(MeetingProgramBase):
     id: str
@@ -82,6 +84,10 @@ class MeetingProgramRead(MeetingProgramBase):
     time: Optional[str] = None  # Formatted start_time - end_time
     creator_name: Optional[str] = None
     participant_names: Optional[List[str]] = None
+    assigned_user_name: Optional[str] = None  # Name of the assigned field agent
+    
+    # User assignment
+    user_id: Optional[str] = None  # ID of the assigned user
     
     # Relationships
     creator: Optional[UserRead] = None
@@ -114,12 +120,13 @@ class MeetingProgramUpdate(BaseModel):
     meeting_type: Optional[str] = None
     status: Optional[str] = None
     
-    participants: Optional[List[Dict[str, Any]]] = None  # Changed to List[Dict]
+    participants: Optional[List[Dict[str, Any]]] = None  # List of objects with 'name' field for manual entry
     expected_attendance: Optional[int] = Field(None, ge=0)
     actual_attendance: Optional[int] = Field(None, ge=0)
     
     reminder_date: Optional[datetime] = None
     minutes: Optional[str] = Field(None, max_length=5000)
+    user_id: Optional[str] = Field(None)  # For assigning users to meetings
     
     @validator('meeting_type')
     def validate_meeting_type(cls, v):
@@ -145,6 +152,11 @@ class MeetingProgramKPIs(BaseModel):
     average_attendance: Optional[float]
     meetings_by_type: Dict[str, int]
     monthly_meetings: Dict[str, int]  # Format: "YYYY-MM" -> count
+    
+    # Role-based KPIs
+    meetings_created_by_me: Optional[int] = 0
+    meetings_assigned_to_me: Optional[int] = 0
+    meetings_assigned_to_field_agents: Optional[int] = 0
 
 class MeetingProgramStats(BaseModel):
     status_distribution: List[Dict[str, Any]]  # List of {status, count, percentage}

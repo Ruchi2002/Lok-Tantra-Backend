@@ -9,8 +9,11 @@ import {
   Building2,
   Activity
 } from 'lucide-react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const SessionStats = ({ stats, kpis }) => {
+  const { t, tSection } = useTranslation();
+  const tLokSabha = tSection('dashboard'); // Using dashboard section for Lok Sabha translations
   const formatPercentage = (value) => {
     return `${value.toFixed(1)}%`;
   };
@@ -35,7 +38,7 @@ const SessionStats = ({ stats, kpis }) => {
             <h3 className="text-2xl font-bold text-gray-900">
               {formatNumber(kpis.total_questions || 0)}
             </h3>
-            <p className="text-sm text-gray-600">Total Questions Asked</p>
+            <p className="text-sm text-gray-600">{t('totalQuestionsAsked')}</p>
           </div>
           <div className="text-xs text-green-600 font-medium">
             +12% from last month
@@ -49,7 +52,7 @@ const SessionStats = ({ stats, kpis }) => {
               <Star className="w-6 h-6 text-yellow-600" />
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-600">Starred</div>
+              <div className="text-sm text-gray-600">{tLokSabha('starredQuestions')}</div>
               <div className="text-lg font-bold text-yellow-600">
                 {formatPercentage(kpis.starred_ratio || 0)}
               </div>
@@ -59,11 +62,11 @@ const SessionStats = ({ stats, kpis }) => {
             <h3 className="text-2xl font-bold text-gray-900">
               {formatPercentage(kpis.unstarred_ratio || 0)}
             </h3>
-            <p className="text-sm text-gray-600">Unstarred Questions</p>
+            <p className="text-sm text-gray-600">{tLokSabha('unstarredQuestions')}</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <FileText className="w-3 h-3" />
-            <span>Starred vs Unstarred Ratio</span>
+            <span>{t('starredVsUnstarredRatio')}</span>
           </div>
         </div>
 
@@ -74,7 +77,7 @@ const SessionStats = ({ stats, kpis }) => {
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-600">Answered</div>
+              <div className="text-sm text-gray-600">{tLokSabha('answered')}</div>
               <div className="text-lg font-bold text-green-600">
                 {formatPercentage(kpis.answered_ratio || 0)}
               </div>
@@ -84,11 +87,11 @@ const SessionStats = ({ stats, kpis }) => {
             <h3 className="text-2xl font-bold text-gray-900">
               {formatPercentage(kpis.pending_ratio || 0)}
             </h3>
-            <p className="text-sm text-gray-600">Pending Questions</p>
+            <p className="text-sm text-gray-600">{tLokSabha('pendingQuestions')}</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="w-3 h-3" />
-            <span>Answered vs Pending Ratio</span>
+            <span>{t('answeredVsPendingRatio')}</span>
           </div>
         </div>
 
@@ -105,7 +108,7 @@ const SessionStats = ({ stats, kpis }) => {
           </div>
           <div className="mb-2">
             <h3 className="text-2xl font-bold text-gray-900">Excellent</h3>
-            <p className="text-sm text-gray-600">Performance Rating</p>
+            <p className="text-sm text-gray-600">{t('performanceRating')}</p>
           </div>
           <div className="text-xs text-green-600 font-medium">
             Above average performance
@@ -118,7 +121,7 @@ const SessionStats = ({ stats, kpis }) => {
         {/* Top Ministries Chart */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Top 3 Ministries Addressed</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('top3MinistriesAddressed')}</h3>
             <Building2 className="w-5 h-5 text-gray-400" />
           </div>
           
@@ -132,7 +135,7 @@ const SessionStats = ({ stats, kpis }) => {
                       {ministry.name}
                     </span>
                     <span className="text-gray-900 font-semibold">
-                      {ministry.count} questions
+                      {ministry.count} {tLokSabha('questions')}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -142,7 +145,7 @@ const SessionStats = ({ stats, kpis }) => {
                     ></div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {formatPercentage(percentage)} of total questions
+                    {formatPercentage(percentage)} {t('ofTotalQuestions')}
                   </div>
                 </div>
               );
@@ -153,7 +156,7 @@ const SessionStats = ({ stats, kpis }) => {
         {/* Questions Per Session Chart */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Questions Asked per Session</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{tLokSabha('questionsPerSession')}</h3>
             <TrendingUp className="w-5 h-5 text-gray-400" />
           </div>
           
@@ -167,9 +170,9 @@ const SessionStats = ({ stats, kpis }) => {
                     <span className="text-gray-700 font-medium">
                       {session.session}
                     </span>
-                    <span className="text-gray-900 font-semibold">
-                      {session.count} questions
-                    </span>
+                                          <span className="text-gray-900 font-semibold">
+                        {session.count} {tLokSabha('questions')}
+                      </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -186,17 +189,17 @@ const SessionStats = ({ stats, kpis }) => {
 
       {/* Detailed Analytics */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Detailed Analytics</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('detailedAnalytics')}</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Question Type Distribution */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-700">Question Type Distribution</h4>
+            <h4 className="text-sm font-medium text-gray-700">{t('questionTypeDistribution')}</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-gray-600">Starred</span>
+                  <span className="text-sm text-gray-600">{tLokSabha('starredQuestions')}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
                   {formatPercentage(kpis.starred_ratio || 0)}
@@ -205,7 +208,7 @@ const SessionStats = ({ stats, kpis }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Unstarred</span>
+                  <span className="text-sm text-gray-600">{tLokSabha('unstarredQuestions')}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
                   {formatPercentage(kpis.unstarred_ratio || 0)}
@@ -216,12 +219,12 @@ const SessionStats = ({ stats, kpis }) => {
 
           {/* Response Status */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-700">Response Status</h4>
+            <h4 className="text-sm font-medium text-gray-700">{t('responseStatus')}</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-gray-600">Answered</span>
+                  <span className="text-sm text-gray-600">{tLokSabha('answered')}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
                   {formatPercentage(kpis.answered_ratio || 0)}
@@ -230,7 +233,7 @@ const SessionStats = ({ stats, kpis }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-gray-600">Pending</span>
+                  <span className="text-sm text-gray-600">{tLokSabha('pending')}</span>
                 </div>
                 <span className="text-sm font-medium text-gray-900">
                   {formatPercentage(kpis.pending_ratio || 0)}
@@ -241,10 +244,10 @@ const SessionStats = ({ stats, kpis }) => {
 
           {/* Performance Metrics */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-gray-700">Performance Metrics</h4>
+            <h4 className="text-sm font-medium text-gray-700">{tLokSabha('performanceMetrics')}</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Avg Questions/Session</span>
+                <span className="text-sm text-gray-600">{t('avgQuestionsPerSession')}</span>
                 <span className="text-sm font-medium text-gray-900">
                   {kpis.questions_per_session ? 
                     Math.round(kpis.questions_per_session.reduce((sum, s) => sum + s.count, 0) / kpis.questions_per_session.length) : 
@@ -253,13 +256,13 @@ const SessionStats = ({ stats, kpis }) => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Response Rate</span>
+                <span className="text-sm text-gray-600">{t('responseRate')}</span>
                 <span className="text-sm font-medium text-gray-900">
                   {formatPercentage(kpis.answered_ratio || 0)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Efficiency Score</span>
+                <span className="text-sm text-gray-600">{t('efficiencyScore')}</span>
                 <span className="text-sm font-medium text-gray-900">85%</span>
               </div>
             </div>
@@ -269,7 +272,7 @@ const SessionStats = ({ stats, kpis }) => {
 
       {/* Insights */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Insights</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('keyInsights')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-gray-700">

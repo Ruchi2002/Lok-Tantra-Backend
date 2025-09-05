@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Field, DateTime
+from sqlalchemy import Column, Text
 from datetime import datetime
 from typing import Optional
 from enum import Enum
@@ -33,20 +34,20 @@ class ReceivedLetter(SQLModel, table=True):
     sender_phone: Optional[str] = Field(default=None, max_length=20, description="Phone number of the sender")
     sender_address: Optional[str] = Field(default=None, max_length=500, description="Address of the sender")
     subject: str = Field(max_length=500, description="Subject of the letter")
-    content: str = Field(max_length=10000, description="Content/body of the letter")
+    content: str = Field(sa_column=Column(Text), description="Content/body of the letter")
     category: LetterCategory = Field(default=LetterCategory.OTHER, description="Category of the letter")
     priority: LetterPriority = Field(default=LetterPriority.MEDIUM, description="Priority level")
     status: LetterStatus = Field(default=LetterStatus.NEW, description="Current status")
     received_date: datetime = Field(default_factory=datetime.utcnow, description="Date when letter was received")
     due_date: Optional[datetime] = Field(default=None, description="Due date for response")
-    assigned_to: Optional[int] = Field(default=None, description="User assigned to handle this letter")
-    response_content: Optional[str] = Field(default=None, max_length=10000, description="Response content")
+    assigned_to: Optional[str] = Field(default=None, description="User assigned to handle this letter")
+    response_content: Optional[str] = Field(default=None, sa_column=Column(Text), description="Response content")
     response_date: Optional[datetime] = Field(default=None, description="Date when response was sent")
     attachments: Optional[str] = Field(default=None, max_length=2000, description="Comma-separated list of attachment file paths")
     notes: Optional[str] = Field(default=None, description="Internal notes about the letter")
-    tenant_id: Optional[int] = Field(default=None, description="Tenant ID for multi-tenancy")
+    tenant_id: Optional[str] = Field(default=None, description="Tenant ID for multi-tenancy")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Record creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Record last update timestamp")
-    created_by: Optional[int] = Field(default=None, description="User who created this record")
-    updated_by: Optional[int] = Field(default=None, description="User who last updated this record")
+    created_by: Optional[str] = Field(default=None, description="User who created this record")
+    updated_by: Optional[str] = Field(default=None, description="User who last updated this record")
 

@@ -179,6 +179,13 @@ class AuthenticationService:
         role_name = "assistant"  # Default
         if hasattr(user, 'role') and user.role and hasattr(user.role, 'name'):
             role_name = user.role.name
+            logger.info(f"User {user.email} has role from database: {role_name}")
+            # Normalize role names for consistency
+            if role_name.lower() in ["fieldagent", "field_agent"]:
+                role_name = "FieldAgent"
+                logger.info(f"Normalized role name to: {role_name}")
+        else:
+            logger.warning(f"User {user.email} has no role object or role name")
         
         # Get user permissions from database using role_id
         permissions = []

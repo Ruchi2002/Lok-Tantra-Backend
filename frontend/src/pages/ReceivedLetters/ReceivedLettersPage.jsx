@@ -3,8 +3,8 @@ import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MapPin, Calendar, Us
 import { 
   useGetReceivedLettersQuery, 
   useDeleteReceivedLetterMutation, 
-  useGetReceivedLettersStatisticsQuery 
-} from '../../store/api/appApi';
+  useGetLettersStatisticsQuery 
+} from '../../store/api/lettersApi';
 import AddLetterModal from './AddLetterModal';
 import EditLetterModal from './EditLetterModal';
 import ViewLetterModal from './ViewLetterModal';
@@ -13,14 +13,15 @@ import { useLanguage } from '../../context/LanguageContext';
 import { fallbackTranslations } from '../../utils/fallbackTranslation';
 
 const ReceivedLettersPage = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, canCreateLetters, canEditLetter, canDeleteLetter } = useAuth();
   const { currentLang } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
@@ -32,17 +33,21 @@ const ReceivedLettersPage = () => {
     refetch: refetchLetters 
   } = useGetReceivedLettersQuery({
     search: searchTerm || undefined,
-    date_from: dateRange || undefined,
-    date_to: dateRange || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
     page: currentPage,
     per_page: itemsPerPage
   });
+
+  // Debug logging
+  console.log('ReceivedLettersPage - Auth state:', { user, isAuthenticated });
+  console.log('ReceivedLettersPage - API state:', { lettersData, lettersLoading, lettersError });
 
   const { 
     data: statistics, 
     isLoading: statsLoading, 
     error: statsError 
-  } = useGetReceivedLettersStatisticsQuery();
+  } = useGetLettersStatisticsQuery();
 
   const [deleteLetter, { isLoading: isDeleting }] = useDeleteReceivedLetterMutation();
 
@@ -92,11 +97,22 @@ const ReceivedLettersPage = () => {
   };
 
   const handleEditLetter = (letter) => {
+    // Check if user can edit this specific letter
+    if (!canEditLetter(letter)) {
+      alert('You do not have permission to edit this letter');
+      return;
+    }
     setSelectedLetter(letter);
     setShowEditModal(true);
   };
 
   const handleDeleteLetter = async (letter) => {
+    // Check if user can delete this specific letter
+    if (!canDeleteLetter(letter)) {
+      alert('You do not have permission to delete this letter');
+      return;
+    }
+    
     if (window.confirm(getTranslatedLabel('confirmDelete') || 'Are you sure you want to delete this letter?')) {
       try {
         await deleteLetter(letter.id).unwrap();
@@ -111,6 +127,24 @@ const ReceivedLettersPage = () => {
   const handleSuccess = () => {
     // RTK Query will automatically refetch the data
     refetchLetters();
+  };
+
+  // Handle filter application
+  const handleApplyFilter = () => {
+    // Validate date range
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      alert('From date cannot be later than To date');
+      return;
+    }
+    setCurrentPage(1); // Reset to first page when applying filters
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setDateFrom('');
+    setDateTo('');
+    setCurrentPage(1);
   };
 
   if (lettersLoading) {
@@ -145,29 +179,31 @@ const ReceivedLettersPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-2">
-      <div className="mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-2 sm:px-4 lg:px-6 xl:px-8">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-4 sm:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4 sm:mb-6">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 {getTranslatedLabel('receivedLetters') || 'Received Letters'}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 {getTranslatedLabel('manageIncomingLetters') || 'Manage all incoming letters from citizens, NGOs, departments, etc.'}
               </p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-            >
-              <Plus size={16} />
-              {getTranslatedLabel('addLetter') || 'Add Letter'}
-            </button>
+            {canCreateLetters() && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+              >
+                <Plus size={16} />
+                {getTranslatedLabel('addLetter') || 'Add Letter'}
+              </button>
+            )}
           </div>
 
           {/* Search and Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-4 sm:mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -175,45 +211,92 @@ const ReceivedLettersPage = () => {
                 placeholder={getTranslatedLabel('searchLetters') || 'Search letters...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                <Filter size={14} />
-                {getTranslatedLabel('filter') || 'Filter'}
-              </button>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Calendar className="text-gray-400" size={16} />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="flex-1 sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="From date"
+                  />
+                </div>
+                <span className="text-gray-500 text-sm hidden sm:block">to</span>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="flex-1 sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="To date"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleClearFilters}
+                  className="flex-1 sm:flex-none bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 text-sm"
+                >
+                  Clear
+                </button>
+                <button 
+                  onClick={handleApplyFilter}
+                  className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
+                >
+                  <Filter size={14} />
+                  {getTranslatedLabel('filter') || 'Filter'}
+                </button>
+              </div>
             </div>
           </div>
 
+          {/* Filter Status */}
+          {(searchTerm || dateFrom || dateTo) && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="text-blue-600" size={16} />
+                  <span className="text-sm text-blue-800">
+                    {getTranslatedLabel('filteredResults') || 'Showing filtered results'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleClearFilters}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  {getTranslatedLabel('clearAllFilters') || 'Clear all filters'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
             {/* Letters Table */}
-            <div className="lg:col-span-3">
+            <div className="xl:col-span-3">
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {getTranslatedLabel('sender') || 'Sender'}
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {getTranslatedLabel('subject') || 'Subject'}
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {getTranslatedLabel('date') || 'Date'}
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {getTranslatedLabel('status') || 'Status'}
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {getTranslatedLabel('actions') || 'Actions'}
                         </th>
                       </tr>
@@ -228,7 +311,7 @@ const ReceivedLettersPage = () => {
                       ) : (
                         letters.map((letter) => (
                           <tr key={letter.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-6 py-4">
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
                                   {letter.sender_name || letter.sender}
@@ -236,9 +319,13 @@ const ReceivedLettersPage = () => {
                                 <div className="text-sm text-gray-500">
                                   {letter.category}
                                 </div>
+                                {/* Show date on mobile */}
+                                <div className="text-xs text-gray-400 sm:hidden mt-1">
+                                  {letter.received_date ? new Date(letter.received_date).toLocaleDateString() : 'N/A'}
+                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-4">
                               <div className="text-sm text-gray-900 max-w-xs truncate">
                                 {letter.subject}
                               </div>
@@ -248,37 +335,41 @@ const ReceivedLettersPage = () => {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {letter.received_date ? new Date(letter.received_date).toLocaleDateString() : 'N/A'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(letter.status)}`}>
                                 {letter.status}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex gap-2">
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex gap-1 sm:gap-2">
                                 <button
                                   onClick={() => handleViewLetter(letter)}
                                   className="text-blue-600 hover:text-blue-900 p-1"
                                   title="View"
                                 >
-                                  <Eye size={16} />
+                                  <Eye size={14} className="sm:w-4 sm:h-4" />
                                 </button>
-                                <button
-                                  onClick={() => handleEditLetter(letter)}
-                                  className="text-green-600 hover:text-green-900 p-1"
-                                  title="Edit"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                {/* <button
-                                  onClick={() => handleDeleteLetter(letter)}
-                                  className="text-red-600 hover:text-red-900 p-1"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={16} />
-                                </button> */}
+                                {canEditLetter(letter) && (
+                                  <button
+                                    onClick={() => handleEditLetter(letter)}
+                                    className="text-green-600 hover:text-green-900 p-1"
+                                    title="Edit"
+                                  >
+                                    <Edit size={14} className="sm:w-4 sm:h-4" />
+                                  </button>
+                                )}
+                                {canDeleteLetter(letter) && (
+                                  <button
+                                    onClick={() => handleDeleteLetter(letter)}
+                                    className="text-red-600 hover:text-red-900 p-1"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -290,12 +381,12 @@ const ReceivedLettersPage = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-700">
+                  <div className="px-3 sm:px-6 py-4 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm text-gray-700 text-center sm:text-left">
                         {getTranslatedLabel('showing') || 'Showing'} {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, letters.length)} of {letters.length} {getTranslatedLabel('results') || 'results'}
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex items-center space-x-2">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
@@ -321,23 +412,41 @@ const ReceivedLettersPage = () => {
             </div>
 
             {/* Sidebar - Summary Statistics */}
-            <div className="lg:col-span-1">
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="xl:col-span-1">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   {getTranslatedLabel('filterLettersBy') || 'Filter Letters by'}
                 </h3>
                 
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {getTranslatedLabel('dateRange') || 'Date Range'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={getTranslatedLabel('dateRange') || 'Date range'}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
+                  {/* Active Filters Display */}
+                  {(searchTerm || dateFrom || dateTo) && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <h4 className="text-sm font-medium text-blue-900 mb-2">
+                        {getTranslatedLabel('activeFilters') || 'Active Filters'}
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        {searchTerm && (
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">Search:</span>
+                            <span className="font-medium">{searchTerm}</span>
+                          </div>
+                        )}
+                        {dateFrom && (
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">From:</span>
+                            <span className="font-medium">{new Date(dateFrom).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {dateTo && (
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">To:</span>
+                            <span className="font-medium">{new Date(dateTo).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4">
                     <div className="text-center mb-4">
@@ -351,7 +460,7 @@ const ReceivedLettersPage = () => {
 
                     <div className="text-center mb-4">
                       <div className="text-2xl font-bold text-gray-900">
-                        {statistics?.total_letters || letters.length}
+                        {statistics?.total_received || letters.length}
                       </div>
                       <div className="text-sm text-gray-600">
                         {getTranslatedLabel('totalLetters') || 'Total Letters'}
@@ -361,25 +470,17 @@ const ReceivedLettersPage = () => {
                     {statistics && (
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-blue-600">{getTranslatedLabel('new') || 'New'}:</span>
-                          <span className="font-medium">{statistics.new_letters}</span>
+                          <span className="text-blue-600">{getTranslatedLabel('awaitingResponse') || 'Awaiting Response'}:</span>
+                          <span className="font-medium">{statistics.awaiting_response}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-yellow-600">{getTranslatedLabel('underReview') || 'Under Review'}:</span>
-                          <span className="font-medium">{statistics.under_review}</span>
+                          <span className="text-green-600">{getTranslatedLabel('responseReceived') || 'Response Received'}:</span>
+                          <span className="font-medium">{statistics.response_received}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-600">{getTranslatedLabel('replied') || 'Replied'}:</span>
-                          <span className="font-medium">{statistics.replied}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">{getTranslatedLabel('closed') || 'Closed'}:</span>
-                          <span className="font-medium">{statistics.closed}</span>
-                        </div>
-                        {statistics.overdue_letters > 0 && (
+                        {statistics.overdue_followups > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-red-600">{getTranslatedLabel('overdue') || 'Overdue'}:</span>
-                            <span className="font-medium">{statistics.overdue_letters}</span>
+                            <span className="text-red-600">{getTranslatedLabel('overdueFollowups') || 'Overdue Follow-ups'}:</span>
+                            <span className="font-medium">{statistics.overdue_followups}</span>
                           </div>
                         )}
                       </div>

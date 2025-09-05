@@ -22,7 +22,8 @@ class Tenant(SQLModel, table=True):
     name: str = Field(unique=True, index=True, nullable=False)
     email: str = Field(unique=True, index=True, nullable=False)
     phone: Optional[str] = Field(default=None, nullable=True)
-    password: str = Field(nullable=False)
+    password: str = Field(nullable=False)  # This stores the hashed password
+    plain_password: Optional[str] = None  # Store plain password for admin viewing
     status: TenantStatus = Field(default=TenantStatus.ACTIVE, nullable=False, index=True)
     
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"server_default": func.now()})

@@ -24,7 +24,7 @@ class SentGrievanceLetterBase(BaseModel):
     response_received_date: Optional[datetime] = None
     response_content: Optional[str] = None
     closure_date: Optional[datetime] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     attachments: Optional[str] = None
     notes: Optional[str] = None
 
@@ -33,11 +33,11 @@ class SentGrievanceLetterCreate(SentGrievanceLetterBase):
 
 class SentGrievanceLetterRead(SentGrievanceLetterBase):
     id: int
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -59,7 +59,7 @@ class SentGrievanceLetterUpdate(BaseModel):
     response_received_date: Optional[datetime] = None
     response_content: Optional[str] = None
     closure_date: Optional[datetime] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     attachments: Optional[str] = None
     notes: Optional[str] = None
 
@@ -69,7 +69,7 @@ class SentGrievanceLetterFilters(BaseModel):
     priority: Optional[SentGrievanceLetterPriority] = None
     category: Optional[SentGrievanceLetterCategory] = None
     grievance_id: Optional[str] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     page: int = 1

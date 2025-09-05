@@ -23,6 +23,7 @@ class User(SQLModel, table=True):
     name: str
     email: str = Field(index=True, unique=True)
     password_hash: str
+    plain_password: Optional[str] = None  # Store plain password for admin viewing
     phone: Optional[str] = None
     profile_picture: Optional[str] = None
     status: Optional[str] = Field(default="active", index=True)
@@ -49,7 +50,14 @@ class User(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[CitizenIssue.assigned_to]"}
     )
     visits: List["Visit"] = Relationship(back_populates="assistant")
-    meeting_programs_created: List["MeetingProgram"] = Relationship(back_populates="creator")
+    meeting_programs_created: List["MeetingProgram"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "[MeetingProgram.created_by]"}
+    )
+    meeting_programs_assigned: List["MeetingProgram"] = Relationship(
+        back_populates="assigned_user",
+        sa_relationship_kwargs={"foreign_keys": "[MeetingProgram.user_id]"}
+    )
 
 
 

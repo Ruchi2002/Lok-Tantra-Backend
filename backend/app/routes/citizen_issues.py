@@ -1,6 +1,6 @@
 # app/routes/citizen_issue_routes.py - FIXED VERSION
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select, and_, or_
+from sqlmodel import Session, select, and_, or_, desc
 from typing import List, Optional
 from datetime import datetime
 import logging
@@ -10,8 +10,14 @@ from app.core.auth import get_current_user
 from app.schemas.citizen_issues_schema import CitizenIssueCreate, CitizenIssueRead, CitizenIssueUpdate
 from app.crud.citizen_issues_crud import (
     create_citizen_issue, get_citizen_issue, get_all_citizen_issues, 
-    update_citizen_issue, delete_citizen_issue, get_citizen_issues_geojson
+    update_citizen_issue, delete_citizen_issue, get_citizen_issues_geojson,
+    get_field_agent_issues
 )
+from app.core.role_middleware import (
+    get_accessible_issues_query, can_access_issue, require_permission,
+    require_role, Permission
+)
+from app.utils.role_permissions import role_permissions
 from app.models.citizen_issues import CitizenIssue
 from app.models.user import User
 from app.models.Issue_category import IssueCategory
@@ -279,16 +285,27 @@ def get_areas(db: Session = Depends(get_session)):
 
 @router.get("/users", response_model=List[dict])
 def get_available_users(
+    role: Optional[str] = Query(None, description="Filter by role (e.g., 'field_agent', 'admin')"),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Get available users for assignment based on user role"""
+    """Get available users for assignment based on user role and filters"""
     try:
         user_role = get_user_role_name(current_user)
+        logger.info(f"Users endpoint - User {current_user.email} has role: {user_role}")
+        logger.info(f"Requested filters - role: {role}, tenant_id: {tenant_id}")
         
         if user_role == "super_admin":
-            # Super admin can see all users
-            users = db.exec(select(User)).all()
+            # Super admin can see all users, apply filters if provided
+            query = select(User)
+            if role:
+                # Filter by role (case-insensitive)
+                query = query.where(User.role.has(name__icontains=role))
+            if tenant_id:
+                query = query.where(User.tenant_id == tenant_id)
+            users = db.exec(query).all()
+            
         elif user_role in ["tenant", "tenant_admin"]:
             # Tenant users can only see users from their tenant
             if not hasattr(current_user, 'tenant_id') or not current_user.tenant_id:
@@ -296,19 +313,32 @@ def get_available_users(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="No tenant assignment"
                 )
-            users = db.exec(
-                select(User).where(User.tenant_id == current_user.tenant_id)
-            ).all()
+            
+            # Always filter by user's tenant
+            query = select(User).where(User.tenant_id == current_user.tenant_id)
+            
+            # Apply additional role filter if requested
+            if role:
+                query = query.where(User.role.has(name__icontains=role))
+            
+            users = db.exec(query).all()
+            
+        elif user_role in ["assistant", "FieldAgent", "field_agent"]:
+            # FieldAgents and Assistants can only see themselves
+            users = [current_user]
         else:
             # Other roles can only see themselves
             users = [current_user]
+        
+        logger.info(f"Found {len(users)} users for {current_user.email}")
         
         return [
             {
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
-                "role": get_user_role_name(user)
+                "role": get_user_role_name(user),
+                "tenant_id": getattr(user, 'tenant_id', None)
             }
             for user in users
         ]
@@ -321,6 +351,51 @@ def get_available_users(
             detail="Failed to fetch users"
         )
 
+@router.get("/field-agent", response_model=List[dict])
+def get_field_agent_issues_route(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Get issues that a FieldAgent can access (created by or assigned to them)"""
+    try:
+        user_role = get_user_role_name(current_user)
+        logger.info(f"FieldAgent endpoint - User {current_user.email} has role: {user_role}")
+        
+        # Check if user is a FieldAgent
+        if user_role not in ["FieldAgent", "field_agent", "assistant"]:
+            logger.warning(f"Access denied to FieldAgent endpoint for user {current_user.email} with role {user_role}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Only FieldAgents can access this endpoint."
+            )
+        
+        # Get FieldAgent issues
+        issues = get_field_agent_issues(db, str(current_user.id), skip, limit)
+        
+        # Transform for frontend
+        transformed_issues = []
+        for issue in issues:
+            try:
+                transformed = transform_issue_for_frontend(issue, db)
+                transformed_issues.append(transformed)
+            except Exception as transform_error:
+                logger.error(f"Error transforming issue {issue.id}: {transform_error}")
+                continue
+        
+        logger.info(f"Returning {len(transformed_issues)} issues for FieldAgent {current_user.id}")
+        return transformed_issues
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching FieldAgent issues: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch FieldAgent issues"
+        )
+
 @router.get("/filtered", response_model=List[dict])
 def get_filtered_citizen_issues(
     status: Optional[str] = Query(None, description="Filter by status"),
@@ -329,6 +404,7 @@ def get_filtered_citizen_issues(
     area_id: Optional[str] = Query(None, description="Filter by area ID"),
     assigned_to: Optional[str] = Query(None, description="Filter by assigned user ID"),
     search: Optional[str] = Query(None, description="Search in title and description"),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID (Super Admin only)"),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     db: Session = Depends(get_session),
@@ -336,8 +412,13 @@ def get_filtered_citizen_issues(
 ):
     """Get filtered citizen issues with advanced filtering"""
     try:
-        # Start with base query
-        query = get_filtered_query(current_user)
+        # Start with role-based filtered query
+        query = get_accessible_issues_query(current_user, db)
+        
+        # Super Admin can filter by tenant
+        if tenant_id and role_permissions.can_switch_tenants(getattr(current_user.role, 'name', 'unknown')):
+            query = query.where(CitizenIssue.tenant_id == tenant_id)
+            logger.info(f"Super Admin filtering by tenant: {tenant_id}")
         
         # Apply filters
         conditions = []
@@ -368,6 +449,9 @@ def get_filtered_citizen_issues(
         # Apply all conditions
         if conditions:
             query = query.where(and_(*conditions))
+        
+        # Add ordering by most recent first
+        query = query.order_by(desc(CitizenIssue.created_at))
         
         # Add pagination
         query = query.offset(skip).limit(limit)
@@ -540,143 +624,88 @@ def bulk_delete_issues(
 def create_citizen_issue_route(
     issue_in: CitizenIssueCreate, 
     db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permission(Permission.CREATE_ISSUES))
 ):
-    """Create a new citizen issue - automatically assigns creator"""
-    logger.info(f"Creating citizen issue for user: {getattr(current_user, 'email', 'No email')}")
-    logger.info(f"User object type: {type(current_user)}")
-    logger.info(f"User object attributes: {dir(current_user)}")
-    logger.info(f"User ID: {getattr(current_user, 'id', 'No ID')}")
-    logger.info(f"Received issue data: {issue_in.model_dump()}")
+    """Create a new citizen issue with role-based access control"""
+    logger.info(f"Creating citizen issue for user: {current_user.email} (role: {getattr(current_user.role, 'name', 'unknown')})")
     
     try:
-        # Ensure the issue is created by the current user
+        # Get user role and tenant info
+        user_role = getattr(current_user.role, 'name', 'assistant')
+        user_tenant_id = getattr(current_user, 'tenant_id', None)
+        
+        # Prepare issue data
         issue_data = issue_in.model_dump()
-        issue_data['created_by'] = current_user.id
         
-        logger.info(f"User tenant_id: {getattr(current_user, 'tenant_id', 'Not set')}")
-        logger.info(f"User role_id: {getattr(current_user, 'role_id', 'Not set')}")
-        
-        # Handle tenant_id - make it optional for users without tenant
-        if hasattr(current_user, 'tenant_id') and current_user.tenant_id:
-            issue_data['tenant_id'] = current_user.tenant_id
-            logger.info(f"Using user's tenant_id: {current_user.tenant_id}")
-        else:
-            # Check if user has a role that requires tenant assignment
-            user_role = get_user_role_name(current_user)
-            logger.info(f"User role determined: {user_role}")
-            
-            if user_role in ["tenant", "tenant_admin"]:
-                # These roles must have a tenant
-                logger.error(f"User {current_user.id} has role {user_role} but no tenant_id")
+        # Handle tenant assignment based on role
+        if user_role in ["super_admin", "superadmin"]:
+            # Super Admin can create issues for any tenant
+            if not issue_data.get('tenant_id'):
+                # If no tenant specified, use user's tenant or create system tenant
+                if user_tenant_id:
+                    issue_data['tenant_id'] = user_tenant_id
+                else:
+                    # Create system tenant if needed
+                    from app.models.tenant import Tenant
+                    system_tenant = db.exec(select(Tenant).where(Tenant.name == "System")).first()
+                    if not system_tenant:
+                        system_tenant = Tenant(
+                            name="System",
+                            email="system@admin.com",
+                            password="system_password_hash_placeholder"
+                        )
+                        db.add(system_tenant)
+                        db.commit()
+                        db.refresh(system_tenant)
+                    issue_data['tenant_id'] = system_tenant.id
+                    
+        elif user_role in ["admin", "tenant_admin"]:
+            # Admin can only create issues for their tenant
+            if not user_tenant_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Tenant assignment required for this user role"
+                    detail="Tenant assignment required for admin role"
                 )
-            elif user_role == "super_admin":
-                # Super admin can create issues without tenant (system-wide issues)
-                logger.info(f"Super admin {current_user.id} creating system-wide issue")
-                # For super admin, we need to create a system-wide tenant or use a default
-                from app.models.tenant import Tenant
-                system_tenant = db.exec(select(Tenant).where(Tenant.name == "System")).first()
-                
-                if not system_tenant:
-                    # Create a system tenant if it doesn't exist
-                    system_tenant = Tenant(
-                        name="System",
-                        email="system@admin.com",
-                        password="system_password_hash_placeholder"  # This should be properly hashed in production
-                    )
-                    db.add(system_tenant)
-                    db.commit()
-                    db.refresh(system_tenant)
-                    logger.info(f"Created system tenant {system_tenant.id}")
-                
-                issue_data['tenant_id'] = system_tenant.id
+            issue_data['tenant_id'] = user_tenant_id
+            
+        else:
+            # Field Agents and others use their assigned tenant
+            if user_tenant_id:
+                issue_data['tenant_id'] = user_tenant_id
             else:
-                # For assistants and other roles, try to find a default tenant
+                # Try to find default tenant
                 from app.models.tenant import Tenant
-                default_tenant = db.exec(select(Tenant).where(Tenant.name == "System Default")).first()
-                
-                if not default_tenant:
-                    # Try to find any tenant
-                    any_tenant = db.exec(select(Tenant).where(Tenant.name == "System Default")).first()
-                    if any_tenant:
-                        logger.info(f"Using existing tenant {any_tenant.id} for user {current_user.id}")
-                        issue_data['tenant_id'] = any_tenant.id
-                    else:
-                        logger.error(f"No tenants found in database")
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="No tenant assignment available. Please contact administrator."
-                        )
-                else:
+                default_tenant = db.exec(select(Tenant).limit(1)).first()
+                if default_tenant:
                     issue_data['tenant_id'] = default_tenant.id
-                    logger.info(f"Using default tenant {default_tenant.id} for user {current_user.id}")
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="No tenant available. Please contact administrator."
+                    )
         
-        logger.info(f"Final issue data before creation: {issue_data}")
+        # Field Agents can only assign issues to themselves
+        if user_role in ["field_agent", "assistant"]:
+            issue_data['assigned_to'] = current_user.id
         
-        # Ensure tenant_id is set
-        if not issue_data.get('tenant_id'):
-            logger.error(f"No tenant_id available for user {current_user.id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tenant assignment required. Please contact administrator."
-            )
+        logger.info(f"Creating issue with data: {issue_data}")
         
-        # Create the issue using only the fields expected by CitizenIssueCreate
-        create_data = {
-            'title': issue_data['title'],
-            'description': issue_data.get('description'),
-            'location': issue_data.get('location'),
-            'latitude': issue_data.get('latitude'),
-            'longitude': issue_data.get('longitude'),
-            'status': issue_data.get('status'),
-            'priority': issue_data.get('priority'),
-            'assigned_to': issue_data.get('assigned_to'),
-            'category_id': issue_data.get('category_id'),
-            'area_id': issue_data.get('area_id'),
-            'action_taken': issue_data.get('action_taken'),
-            'tenant_id': issue_data['tenant_id'],  # Now guaranteed to exist
-            'created_by': current_user.id  # Add the created_by field
-        }
+        # Create the issue with current user ID for RBAC
+        created_issue = create_citizen_issue(db, CitizenIssueCreate(**issue_data), current_user.id)
         
-        logger.info(f"Create data for CitizenIssueCreate: {create_data}")
+        logger.info(f"Successfully created issue {created_issue.id} for user {current_user.email}")
         
-        # Create the issue
-        created_issue = create_citizen_issue(db, CitizenIssueCreate(**create_data))
-        
-        logger.info(f"Successfully created issue with ID: {created_issue.id}")
-        logger.info(f"Issue created_by: {created_issue.created_by}")
-        logger.info(f"Current user ID: {current_user.id}")
-        
-        # Verify access (defense in depth)
-        logger.info(f"Checking access for user {current_user.id} to issue {created_issue.id}")
-        if not check_issue_access(current_user, created_issue):
-            logger.error(f"Access denied to created issue {created_issue.id}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Access denied to created issue"
-            )
-        
-        logger.info(f"Access granted, transforming issue for frontend")
+        # Transform and return
         transformed_issue = transform_issue_for_frontend(created_issue, db)
-        logger.info(f"Successfully transformed issue, returning response")
         return transformed_issue
         
-    except SecurityError as e:
-        logger.error(f"Security error creating issue: {e}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
-    except ValueError as e:
-        logger.error(f"Validation error creating issue: {e}")
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Unexpected error creating citizen issue: {e}", exc_info=True)
-        logger.error(f"Error type: {type(e)}")
-        logger.error(f"Error details: {str(e)}")
+        logger.error(f"Error creating citizen issue: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Failed to create citizen issue: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create citizen issue"
         )
 
 @router.get("/", response_model=List[CitizenIssueRead])
@@ -684,15 +713,25 @@ def read_all_citizen_issues_route(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get all citizen issues without authentication - PUBLIC ENDPOINT"""
-    logger.info(f"Fetching citizen issues (public access)")
+    """Get citizen issues filtered by user role and permissions"""
+    logger.info(f"Fetching citizen issues for user: {current_user.email} (role: {getattr(current_user.role, 'name', 'unknown')})")
     
     try:
-        # Get all issues without filtering
-        issues = db.exec(select(CitizenIssue).offset(skip).limit(limit)).all()
+        # Get role-based filtered query
+        query = get_accessible_issues_query(current_user, db)
         
-        logger.info(f"Found {len(issues)} citizen issues")
+        # Add ordering by most recent first
+        query = query.order_by(desc(CitizenIssue.created_at))
+        
+        # Add pagination
+        query = query.offset(skip).limit(limit)
+        
+        # Execute query
+        issues = db.exec(query).all()
+        
+        logger.info(f"Found {len(issues)} accessible issues for user {current_user.email}")
 
         # Transform each issue for frontend
         transformed_issues = []
@@ -794,6 +833,75 @@ def debug_create_issue_endpoint(
             "error_type": type(e).__name__
         }
 
+@router.get("/health", response_model=dict)
+def citizen_issues_health_check(db: Session = Depends(get_session)):
+    """Health check endpoint for citizen issues API"""
+    try:
+        # Count total issues
+        total_issues = db.exec(select(CitizenIssue)).all()
+        
+        # Count categories
+        try:
+            total_categories = db.exec(select(IssueCategory)).all()
+        except Exception:
+            total_categories = []
+        
+        # Count users
+        total_users = db.exec(select(User)).all()
+        
+        return {
+            "status": "healthy",
+            "total_issues": len(total_issues),
+            "total_categories": len(total_categories),
+            "total_users": len(total_users),
+            "message": "Citizen Issues API is working",
+            "sample_issues": [
+                {
+                    "id": issue.id,
+                    "title": issue.title,
+                    "status": issue.status,
+                    "created_by": issue.created_by
+                }
+                for issue in total_issues[:3]  # Show first 3 issues
+            ] if total_issues else []
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Citizen Issues API has issues"
+        }
+
+@router.get("/locations", response_model=List[str])
+def get_unique_locations_route(
+    db: Session = Depends(get_session),
+):
+    """Get unique locations - PUBLIC ENDPOINT"""
+    logger.info(f"Fetching unique locations (public access)")
+    
+    try:
+        # Get all unique locations without filtering
+        results = db.exec(
+            select(CitizenIssue.location)
+            .distinct()
+            .where(CitizenIssue.location.isnot(None))
+            .where(CitizenIssue.location != "")
+        ).all()
+        
+        # Remove duplicates and sort
+        unique_locations = sorted(list(set([location for location in results if location])))
+        
+        logger.info(f"Found {len(unique_locations)} unique locations")
+        return unique_locations
+        
+    except Exception as e:
+        logger.error(f"Unexpected error fetching locations: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch locations"
+        )
+
 @router.get("/{issue_id}", response_model=CitizenIssueRead)
 def get_citizen_issue_route(
     issue_id: str,  # Fixed: Changed from int to str (UUID)
@@ -829,7 +937,7 @@ def update_citizen_issue_route(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Update a citizen issue with access control"""
+    """Update a citizen issue with access control and RBAC"""
     logger.info(f"Updating citizen issue {issue_id} for user: {current_user.email}")
     
     try:
@@ -841,22 +949,37 @@ def update_citizen_issue_route(
                 detail="Citizen Issue not found"
             )
         
-        # Check access
-        if not check_issue_access(current_user, existing_issue):
-            logger.warning(f"Access denied to update issue {issue_id} for user {current_user.id}")
+        # Check if user can edit this issue
+        if not can_access_issue(current_user, existing_issue, "edit"):
+            logger.warning(f"Access denied to update issue {issue_id} for user {current_user.email}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Access denied to this issue"
             )
         
-        # Update the issue
-        updated_issue = update_citizen_issue(db, issue_id, issue_update)
+        # Field Agents can only update certain fields
+        user_role = getattr(current_user.role, 'name', 'assistant')
+        if user_role in ["field_agent", "assistant"]:
+            # Remove fields that Field Agents shouldn't modify
+            restricted_fields = ['tenant_id', 'created_by', 'assigned_to']
+            update_data = issue_update.model_dump(exclude_unset=True)
+            for field in restricted_fields:
+                if field in update_data:
+                    logger.warning(f"Field Agent {current_user.email} attempted to modify restricted field: {field}")
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Field Agents cannot modify {field}"
+                    )
+        
+        # Update the issue with current user ID for RBAC
+        updated_issue = update_citizen_issue(db, issue_id, issue_update, current_user.id)
         if not updated_issue:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
                 detail="Citizen Issue not found"
             )
         
+        logger.info(f"Successfully updated issue {issue_id} by user {current_user.email}")
         return transform_issue_for_frontend(updated_issue, db)
         
     except HTTPException:
@@ -889,13 +1012,12 @@ def delete_citizen_issue_route(
                 detail="Citizen Issue not found"
             )
         
-        # Check access (only allow deletion by creator or super admin)
-        user_role = get_user_role_name(current_user)
-        if user_role != "super_admin" and existing_issue.created_by != current_user.id:
-            logger.warning(f"Deletion denied for issue {issue_id} by user {current_user.id}")
+        # Check if user can delete this issue
+        if not can_access_issue(current_user, existing_issue, "delete"):
+            logger.warning(f"Access denied to delete issue {issue_id} for user {current_user.email}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Only the creator or super admin can delete this issue"
+                detail="Access denied to delete this issue"
             )
         
         success = delete_citizen_issue(db, issue_id)
@@ -924,8 +1046,8 @@ def get_citizen_issues_geojson_route(
     logger.info(f"Fetching GeoJSON data (public access)")
     
     try:
-        # Get all issues without filtering
-        issues = db.exec(select(CitizenIssue).offset(skip).limit(limit)).all()
+        # Get all issues without filtering, ordered by most recent first
+        issues = db.exec(select(CitizenIssue).order_by(desc(CitizenIssue.created_at)).offset(skip).limit(limit)).all()
         
         # Convert to GeoJSON format
         features = []
@@ -984,75 +1106,6 @@ def get_citizen_issues_geojson_route(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="Failed to fetch GeoJSON"
         )
-
-@router.get("/locations", response_model=List[str])
-def get_unique_locations_route(
-    db: Session = Depends(get_session),
-):
-    """Get unique locations - PUBLIC ENDPOINT"""
-    logger.info(f"Fetching unique locations (public access)")
-    
-    try:
-        # Get all unique locations without filtering
-        results = db.exec(
-            select(CitizenIssue.location)
-            .distinct()
-            .where(CitizenIssue.location.isnot(None))
-            .where(CitizenIssue.location != "")
-        ).all()
-        
-        # Remove duplicates and sort
-        unique_locations = sorted(list(set([location for location in results if location])))
-        
-        logger.info(f"Found {len(unique_locations)} unique locations")
-        return unique_locations
-        
-    except Exception as e:
-        logger.error(f"Unexpected error fetching locations: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch locations"
-        )
-
-@router.get("/health", response_model=dict)
-def citizen_issues_health_check(db: Session = Depends(get_session)):
-    """Health check endpoint for citizen issues API"""
-    try:
-        # Count total issues
-        total_issues = db.exec(select(CitizenIssue)).all()
-        
-        # Count categories
-        try:
-            total_categories = db.exec(select(IssueCategory)).all()
-        except Exception:
-            total_categories = []
-        
-        # Count users
-        total_users = db.exec(select(User)).all()
-        
-        return {
-            "status": "healthy",
-            "total_issues": len(total_issues),
-            "total_categories": len(total_categories),
-            "total_users": len(total_users),
-            "message": "Citizen Issues API is working",
-            "sample_issues": [
-                {
-                    "id": issue.id,
-                    "title": issue.title,
-                    "status": issue.status,
-                    "created_by": issue.created_by
-                }
-                for issue in total_issues[:3]  # Show first 3 issues
-            ] if total_issues else []
-        }
-    except Exception as e:
-        logger.error(f"Health check failed: {e}", exc_info=True)
-        return {
-            "status": "error",
-            "error": str(e),
-            "message": "Citizen Issues API has issues"
-        }
 
 # Create a separate public router for endpoints that don't need authentication
 public_router = APIRouter(prefix="/citizen-issues-public", tags=["Citizen Issues - Public"])

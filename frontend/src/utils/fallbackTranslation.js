@@ -3,6 +3,816 @@
 export const fallbackTranslations = {
   // Dashboard section labels
   dashboard: {
+    home: {
+      en: "Home",
+      hi: "होम",
+      bn: "হোম",
+      ta: "முகப்பு",
+      mr: "मुख्यपृष्ठ"
+    },
+    login: {
+      en: "Login",
+      hi: "लॉगिन",
+      bn: "লগইন",
+      ta: "உள்நுழைவு",
+      mr: "लॉगिन"
+    },
+    quickActions: {
+      en: "Quick Actions",
+      hi: "त्वरित कार्य",
+      bn: "দ্রুত কর্ম",
+      ta: "விரைவு செயல்கள்",
+      mr: "त्वरित कृती"
+    },
+    viewIncomingCorrespondence: {
+      en: "View incoming correspondence",
+      hi: "आने वाले पत्राचार देखें",
+      bn: "আসা চিঠিপত্র দেখুন",
+      ta: "வரும் கடிதங்களைக் காண்க",
+      mr: "येणारे पत्रव्यवहार पहा"
+    },
+    manageOutgoingLetters: {
+      en: "Manage outgoing letters",
+      hi: "जाने वाले पत्र प्रबंधन",
+      bn: "যাওয়া চিঠি পরিচালনা করুন",
+      ta: "செல்லும் கடிதங்களை நிர்வகிக்கவும்",
+      mr: "जाणारे पत्र व्यवस्थापन करा"
+    },
+    systemOverview: {
+      en: "System Overview",
+      hi: "सिस्टम अवलोकन",
+      bn: "সিস্টেম ওভারভিউ",
+      ta: "சிஸ்டம் கண்ணோட்டம்",
+      mr: "सिस्टम अवलोकन"
+    },
+    systemOverviewAndStatistics: {
+      en: "System overview and statistics",
+      hi: "सिस्टम अवलोकन और आंकड़े",
+      bn: "সিস্টেম ওভারভিউ এবং পরিসংখ্যান",
+      ta: "சிஸ்டம் கண்ணோட்டம் மற்றும் புள்ளிவிபரங்கள்",
+      mr: "सिस्टम अवलोकन आणि आकडेवारी"
+    },
+    configureSystemPreferences: {
+      en: "Configure system preferences",
+      hi: "सिस्टम प्राथमिकताएं कॉन्फ़िगर करें",
+      bn: "সিস্টেম পছন্দগুলি কনফিগার করুন",
+      ta: "சிஸ்டம் விருப்பங்களை கட்டமைக்கவும்",
+      mr: "सिस्टम प्राधान्ये कॉन्फिगर करा"
+    },
+    welcome: {
+      en: "Welcome",
+      hi: "स्वागत है",
+      bn: "স্বাগতম",
+      ta: "வரவேற்கிறோம்",
+      mr: "स्वागत आहे"
+    },
+    welcomeMessage: {
+      en: "Welcome to the Smart Politician Assistant Dashboard. This system helps you manage citizen issues, correspondence, and administrative tasks efficiently.",
+      hi: "स्मार्ट पॉलिटिशियन असिस्टेंट डैशबोर्ड में आपका स्वागत है। यह सिस्टम आपको नागरिक मुद्दों, पत्राचार और प्रशासनिक कार्यों को कुशलतापूर्वक प्रबंधित करने में मदद करता है।",
+      bn: "স্মার্ট পলিটিশিয়ান অ্যাসিস্ট্যান্ট ড্যাশবোর্ডে স্বাগতম। এই সিস্টেম আপনাকে নাগরিক সমস্যা, চিঠিপত্র এবং প্রশাসনিক কাজ দক্ষতার সাথে পরিচালনা করতে সাহায্য করে।",
+      ta: "ஸ்மார்ட் பொலிடிஷியன் அசிஸ்டன்ட் டாஷ்போர்டுக்கு வரவேற்கிறோம். இந்த அமைப்பு குடிமக்களின் பிரச்சனைகள், கடிதங்கள் மற்றும் நிர்வாக பணிகளை திறம்பட நிர்வகிக்க உதவுகிறது.",
+      mr: "स्मार्ट पॉलिटिशियन असिस्टंट डॅशबोर्डमध्ये आपले स्वागत आहे. ही सिस्टम आपल्याला नागरिक समस्या, पत्रव्यवहार आणि प्रशासकीय कार्ये कार्यक्षमतेने व्यवस्थापित करण्यास मदत करते."
+    },
+    gettingStarted: {
+      en: "Getting Started",
+      hi: "शुरू करें",
+      bn: "শুরু করুন",
+      ta: "தொடங்குவது",
+      mr: "सुरु करा"
+    },
+    useQuickActions: {
+      en: "Use the Quick Actions to access main features",
+      hi: "मुख्य सुविधाओं तक पहुंचने के लिए त्वरित कार्यों का उपयोग करें",
+      bn: "প্রধান বৈশিষ্ট্যগুলি অ্যাক্সেস করতে দ্রুত কর্মগুলি ব্যবহার করুন",
+      ta: "முக்கிய அம்சங்களை அணுக துரித செயல்களைப் பயன்படுத்தவும்",
+      mr: "मुख्य वैशिष्ट्ये मिळवण्यासाठी त्वरित कृती वापरा"
+    },
+    navigateThroughSections: {
+      en: "Navigate through different sections using the sidebar",
+      hi: "साइडबार का उपयोग करके विभिन्न खंडों में नेविगेट करें",
+      bn: "সাইডবার ব্যবহার করে বিভিন্ন বিভাগে নেভিগেট করুন",
+      ta: "பக்கப்பட்டியைப் பயன்படுத்தி வெவ்வேறு பிரிவுகளில் செல்லவும்",
+      mr: "साइडबार वापरून विविध विभागांमध्ये नेविगेट करा"
+    },
+    checkSystemOverview: {
+      en: "Check the system overview for important information",
+      hi: "महत्वपूर्ण जानकारी के लिए सिस्टम अवलोकन देखें",
+      bn: "গুরুত্বপূর্ণ তথ্যের জন্য সিস্টেম ওভারভিউ দেখুন",
+      ta: "முக்கிய தகவல்களுக்கு சிஸ்டம் கண்ணோட்டத்தைப் பாருங்கள்",
+      mr: "महत्वाच्या माहितीसाठी सिस्टम अवलोकन तपासा"
+    },
+    recentActivity: {
+      en: "Recent Activity",
+      hi: "हाल की गतिविधि",
+      bn: "সাম্প্রতিক কার্যকলাপ",
+      ta: "சமீபத்திய செயல்பாடு",
+      mr: "अलीकडील क्रियाकलाप"
+    },
+    systemRunningSmoothly: {
+      en: "System is running smoothly",
+      hi: "सिस्टम सुचारू रूप से चल रहा है",
+      bn: "সিস্টেম সুষ্ঠুভাবে চলছে",
+      ta: "சிஸ்டம் சரளமாக இயங்குகிறது",
+      mr: "सिस्टम सुरळीतपणे चालत आहे"
+    },
+    allServicesOperational: {
+      en: "All services are operational",
+      hi: "सभी सेवाएं कार्यात्मक हैं",
+      bn: "সব পরিষেবা কার্যকর",
+      ta: "அனைத்து சேவைகளும் செயல்படுகின்றன",
+      mr: "सर्व सेवा कार्यरत आहेत"
+    },
+    readyToProcessRequests: {
+      en: "Ready to process requests",
+      hi: "अनुरोधों को संसाधित करने के लिए तैयार",
+      bn: "অনুরোধ প্রক্রিয়া করার জন্য প্রস্তুত",
+      ta: "கோரிக்கைகளை செயலாக்க தயாராக உள்ளது",
+      mr: "विनंत्यांना प्रक्रिया करण्यास तयार"
+    },
+    // Additional common translations
+    yes: {
+      en: "Yes",
+      hi: "हाँ",
+      bn: "হ্যাঁ",
+      ta: "ஆம்",
+      mr: "होय"
+    },
+    no: {
+      en: "No",
+      hi: "नहीं",
+      bn: "না",
+      ta: "இல்லை",
+      mr: "नाही"
+    },
+    confirm: {
+      en: "Confirm",
+      hi: "पुष्टि करें",
+      bn: "নিশ্চিত করুন",
+      ta: "உறுதிப்படுத்து",
+      mr: "पुष्टी करा"
+    },
+    back: {
+      en: "Back",
+      hi: "वापस",
+      bn: "ফিরে যান",
+      ta: "திரும்பு",
+      mr: "मागे"
+    },
+    next: {
+      en: "Next",
+      hi: "अगला",
+      bn: "পরবর্তী",
+      ta: "அடுத்து",
+      mr: "पुढील"
+    },
+    previous: {
+      en: "Previous",
+      hi: "पिछला",
+      bn: "পূর্ববর্তী",
+      ta: "முந்தைய",
+      mr: "मागील"
+    },
+    submit: {
+      en: "Submit",
+      hi: "सबमिट करें",
+      bn: "জমা দিন",
+      ta: "சமர்ப்பிக்கவும்",
+      mr: "सबमिट करा"
+    },
+    reset: {
+      en: "Reset",
+      hi: "रीसेट करें",
+      bn: "রিসেট করুন",
+      ta: "மீட்டமை",
+      mr: "रीसेट करा"
+    },
+    download: {
+      en: "Download",
+      hi: "डाउनलोड करें",
+      bn: "ডাউনলোড করুন",
+      ta: "பதிவிறக்கு",
+      mr: "डाउनलोड करा"
+    },
+    upload: {
+      en: "Upload",
+      hi: "अपलोड करें",
+      bn: "আপলোড করুন",
+      ta: "பதிவேற்று",
+      mr: "अपलोड करा"
+    },
+    print: {
+      en: "Print",
+      hi: "प्रिंट करें",
+      bn: "প্রিন্ট করুন",
+      ta: "அச்சிடு",
+      mr: "प्रिंट करा"
+    },
+    share: {
+      en: "Share",
+      hi: "शेयर करें",
+      bn: "শেয়ার করুন",
+      ta: "பகிர்",
+      mr: "शेअर करा"
+    },
+    // Additional translations for example component
+    system: {
+      en: "System",
+      hi: "सिस्टम",
+      bn: "সিস্টেম",
+      ta: "சிஸ்டம்",
+      mr: "सिस्टम"
+    },
+    example: {
+      en: "Example",
+      hi: "उदाहरण",
+      bn: "উদাহরণ",
+      ta: "உதாரணம்",
+      mr: "उदाहरण"
+    },
+    currentLanguage: {
+      en: "Current Language",
+      hi: "वर्तमान भाषा",
+      bn: "বর্তমান ভাষা",
+      ta: "தற்போதைய மொழி",
+      mr: "सध्याची भाषा"
+    },
+    features: {
+      en: "Features",
+      hi: "विशेषताएं",
+      bn: "বৈশিষ্ট্য",
+      ta: "அம்சங்கள்",
+      mr: "वैशिष्ट्ये"
+    },
+    beautifulToggle: {
+      en: "Beautiful Toggle",
+      hi: "सुंदर टॉगल",
+      bn: "সুন্দর টগল",
+      ta: "அழகான மாற்று",
+      mr: "सुंदर टॉगल"
+    },
+    persistentStorage: {
+      en: "Persistent Storage",
+      hi: "स्थायी भंडारण",
+      bn: "স্থায়ী সঞ্চয়",
+      ta: "நிலையான சேமிப்பு",
+      mr: "स्थायी साठवण"
+    },
+    easyIntegration: {
+      en: "Easy Integration",
+      hi: "आसान एकीकरण",
+      bn: "সহজ একীকরণ",
+      ta: "எளிதான ஒருங்கிணைப்பு",
+      mr: "सोपे एकात्मीकरण"
+    },
+    fallbackSystem: {
+      en: "Fallback System",
+      hi: "फॉलबैक सिस्टम",
+      bn: "ফলব্যাক সিস্টেম",
+      ta: "பின்வாங்கல் அமைப்பு",
+      mr: "फॉलबॅक सिस्टम"
+    },
+    translationExamples: {
+      en: "Translation Examples",
+      hi: "अनुवाद उदाहरण",
+      bn: "অনুবাদ উদাহরণ",
+      ta: "மொழிபெயர்ப்பு எடுத்துக்காட்டுகள்",
+      mr: "भाषांतर उदाहरणे"
+    },
+    howToUse: {
+      en: "How to Use",
+      hi: "कैसे उपयोग करें",
+      bn: "কিভাবে ব্যবহার করবেন",
+      ta: "எப்படி பயன்படுத்துவது",
+      mr: "कसे वापरावे"
+    },
+    importHook: {
+      en: "Import the translation hook",
+      hi: "अनुवाद हुक आयात करें",
+      bn: "অনুবাদ হুক আমদানি করুন",
+      ta: "மொழிபெயர்ப்பு ஹூக்கை இறக்குமதி செய்யவும்",
+      mr: "भाषांतर हुक आयात करा"
+    },
+    useHook: {
+      en: "Use the hook in your component",
+      hi: "अपने घटक में हुक का उपयोग करें",
+      bn: "আপনার কম্পোনেন্টে হুক ব্যবহার করুন",
+      ta: "உங்கள் கூறுகளில் ஹூக்கைப் பயன்படுத்தவும்",
+      mr: "तुमच्या घटकामध्ये हुक वापरा"
+    },
+    addTranslations: {
+      en: "Add translations to the file",
+      hi: "फ़ाइल में अनुवाद जोड़ें",
+      bn: "ফাইলে অনুবাদ যোগ করুন",
+      ta: "கோப்பில் மொழிபெயர்ப்புகளைச் சேர்க்கவும்",
+      mr: "फाईलमध्ये भाषांतरे जोडा"
+    },
+    enjoy: {
+      en: "Enjoy multilingual app!",
+      hi: "बहुभाषी ऐप का आनंद लें!",
+      bn: "বহুভাষিক অ্যাপ উপভোগ করুন!",
+      ta: "பல மொழி பயன்பாட்டை அனுபவிக்கவும்!",
+      mr: "बहुभाषिक अॅपचा आनंद घ्या!"
+    },
+    parliamentNewsUpdates: {
+      en: "Parliament News Updates",
+      hi: "संसद समाचार अपडेट",
+      bn: "সংসদ সংবাদ আপডেট",
+      ta: "நாடாளுமன்ற செய்தி புதுப்பிப்புகள்",
+      mr: "संसद बातम्या अपडेट्स"
+    },
+    sessionUpdatesAndProceedings: {
+      en: "Session updates and proceedings",
+      hi: "सत्र अपडेट और कार्यवाही",
+      bn: "সেশন আপডেট এবং কার্যপ্রণালী",
+      ta: "அமர்வு புதுப்பிப்புகள் மற்றும் நடைமுறைகள்",
+      mr: "सत्र अपडेट्स आणि कार्यवाही"
+    },
+    incomingCorrespondence: {
+      en: "Incoming correspondence",
+      hi: "आने वाला पत्राचार",
+      bn: "আসা চিঠিপত্র",
+      ta: "வரும் கடிதங்கள்",
+      mr: "येणारे पत्रव्यवहार"
+    },
+    outgoingPublicInterestLetters: {
+      en: "Outgoing public interest letters",
+      hi: "जाने वाले सार्वजनिक हित पत्र",
+      bn: "যাওয়া জনস্বার্থ চিঠি",
+      ta: "செல்லும் பொது நலன் கடிதங்கள்",
+      mr: "जाणारे सार्वजनिक हित पत्रे"
+    },
+    grievanceResponseLetters: {
+      en: "Grievance response letters",
+      hi: "शिकायत प्रतिक्रिया पत्र",
+      bn: "অভিযোগের প্রতিক्रিয়া চিঠি",
+      ta: "புகார் பதில் கடிதங்கள்",
+      mr: "तक्रार प्रतिसाद पत्रे"
+    },
+    grievanceDashboard: {
+      en: "Grievance Dashboard",
+      hi: "शिकायत डैशबोर्ड",
+      bn: "অভিযোগ ড্যাশবোর্ড",
+      ta: "புகார் டாஷ்போர்டு",
+      mr: "तक्रार डॅशबोर्ड"
+    },
+    overviewOfAllCitizenIssues: {
+      en: "Overview of all citizen issues and their current status",
+      hi: "सभी नागरिक मुद्दों और उनकी वर्तमान स्थिति का अवलोकन",
+      bn: "সব নাগরিক সমস্যা এবং তাদের বর্তমান অবস্থার ওভারভিউ",
+      ta: "அனைத்து குடிமக்கள் பிரச்சனைகள் மற்றும் அவற்றின் தற்போதைய நிலை கண்ணோட்டம்",
+      mr: "सर्व नागरिक समस्या आणि त्यांच्या सध्याच्या स्थितीचे अवलोकन"
+    },
+    overviewOfYourAssignedCitizenIssues: {
+      en: "Overview of your assigned citizen issues and their current status",
+      hi: "आपके सौंपे गए नागरिक मुद्दों और उनकी वर्तमान स्थिति का अवलोकन",
+      bn: "আপনার বরাদ্দকৃত নাগরিক সমস্যা এবং তাদের বর্তমান অবস্থার ওভারভিউ",
+      ta: "உங்களுக்கு ஒதுக்கப்பட்ட குடிமக்கள் பிரச்சனைகள் மற்றும் அவற்றின் தற்போதைய நிலை கண்ணோட்டம்",
+      mr: "तुमच्याकडे नियुक्त केलेल्या नागरिक समस्या आणि त्यांच्या सध्याच्या स्थितीचे अवलोकन"
+    },
+    totalCases: {
+      en: "Total Cases",
+      hi: "कुल मामले",
+      bn: "মোট মামলা",
+      ta: "மொத்த வழக்குகள்",
+      mr: "एकूण प्रकरणे"
+    },
+    solved: {
+      en: "Solved",
+      hi: "हल",
+      bn: "সমাধান",
+      ta: "தீர்க்கப்பட்டது",
+      mr: "सोडवले"
+    },
+    pending: {
+      en: "Pending",
+      hi: "लंबित",
+      bn: "অপেক্ষমাণ",
+      ta: "நிலுவையில்",
+      mr: "प्रलंबित"
+    },
+    onReminder: {
+      en: "On Reminder",
+      hi: "रिमाइंडर पर",
+      bn: "রিমাইন্ডারে",
+      ta: "நினைவூட்டலில்",
+      mr: "रिमाइंडरवर"
+    },
+    tryAgain: {
+      en: "Try Again",
+      hi: "फिर से कोशिश करें",
+      bn: "আবার চেষ্টা করুন",
+      ta: "மீண்டும் முயற்சிக்கவும்",
+      mr: "पुन्हा प्रयत्न करा"
+    },
+    socialMediaHandlesAndTheirHits: {
+      en: "Social Media Handles and Their Hits",
+      hi: "सोशल मीडिया हैंडल्स और उनके हिट्स",
+      bn: "সোশ্যাল মিডিয়া হ্যান্ডেল এবং তাদের হিট",
+      ta: "சமூக ஊடக கைப்பிடிகள் மற்றும் அவற்றின் அடிக்கடி பார்வைகள்",
+      mr: "सोशल मीडिया हँडल्स आणि त्यांचे हिट्स"
+    },
+    socialMediaEngagementMetrics: {
+      en: "Social media engagement metrics",
+      hi: "सोशल मीडिया एंगेजमेंट मेट्रिक्स",
+      bn: "সোশ্যাল মিডিয়া এনগেজমেন্ট মেট্রিক্স",
+      ta: "சமூக ஊடக ஈடுபாட்டு அளவீடுகள்",
+      mr: "सोशल मीडिया सहभाग मेट्रिक्स"
+    },
+    researchWorksAndSpeeches: {
+      en: "Research Works and Speeches",
+      hi: "शोध कार्य और भाषण",
+      bn: "গবেষণা কাজ এবং বক্তৃতা",
+      ta: "ஆராய்ச்சி பணிகள் மற்றும் உரைகள்",
+      mr: "संशोधन कार्ये आणि भाषणे"
+    },
+    researchPublicationsAndSpeechArchives: {
+      en: "Research publications and speech archives",
+      hi: "शोध प्रकाशन और भाषण संग्रह",
+      bn: "গবেষণা প্রকাশনা এবং বক্তৃতা আর্কাইভ",
+      ta: "ஆராய்ச்சி வெளியீடுகள் மற்றும் உரை காப்பகங்கள்",
+      mr: "संशोधन प्रकाशने आणि भाषण संग्रह"
+    },
+    mpladsAndOtherDevelopmentGoal: {
+      en: "MPLADS and Other Development Goal",
+      hi: "एमपीएलएडीएस और अन्य विकास लक्ष्य",
+      bn: "এমপিএলএডিএস এবং অন্যান্য উন্নয়ন লক্ষ্য",
+      ta: "எம்பிஎல்ஏடிஎஸ் மற்றும் பிற மேம்பாட்டு இலக்குகள்",
+      mr: "एमपीएलएडीएस आणि इतर विकास लक्ष्य"
+    },
+    developmentProjectTracking: {
+      en: "Development project tracking",
+      hi: "विकास परियोजना ट्रैकिंग",
+      bn: "উন্নয়ন প্রকল্প ট্র্যাকিং",
+      ta: "மேம்பாட்டு திட்ட கண்காணிப்பு",
+      mr: "विकास प्रकल्प ट्रॅकिंग"
+    },
+    upcomingMeetingsAndPrograms: {
+      en: "UPCOMING Meetings and Programs",
+      hi: "आगामी बैठकें और कार्यक्रम",
+      bn: "আসন্ন সভা এবং কর্মসূচি",
+      ta: "வரவிருக்கும் கூட்டங்கள் மற்றும் திட்டங்கள்",
+      mr: "आगामी बैठका आणि कार्यक्रम"
+    },
+    scheduledEventsAndMeetings: {
+      en: "Scheduled events and meetings",
+      hi: "निर्धारित कार्यक्रम और बैठकें",
+      bn: "নির্ধারিত ইভেন্ট এবং সভা",
+      ta: "திட்டமிடப்பட்ட நிகழ்வுகள் மற்றும் கூட்டங்கள்",
+      mr: "नियोजित कार्यक्रम आणि बैठका"
+    },
+    todaysMeetingsAndAppointment: {
+      en: "Today's Meetings and Appointment",
+      hi: "आज की बैठकें और नियुक्ति",
+      bn: "আজকের সভা এবং নিয়োগ",
+      ta: "இன்றைய கூட்டங்கள் மற்றும் நியமனம்",
+      mr: "आजच्या बैठका आणि नियुक्ती"
+    },
+    errorLoadingMeetings: {
+      en: "Error loading meetings",
+      hi: "बैठकें लोड करने में त्रुटि",
+      bn: "সভা লোড করার সময় ত্রুটি",
+      ta: "கூட்டங்களை ஏற்றுவதில் பிழை",
+      mr: "बैठका लोड करताना त्रुटी"
+    },
+    noMeetingsScheduledForToday: {
+      en: "No meetings scheduled for today.",
+      hi: "आज के लिए कोई बैठक निर्धारित नहीं है।",
+      bn: "আজকের জন্য কোন সভা নির্ধারিত নেই।",
+      ta: "இன்றைக்கு எந்த கூட்டமும் திட்டமிடப்படவில்லை.",
+      mr: "आजसाठी कोणतीही बैठक नियोजित नाही."
+    },
+    untitledMeeting: {
+      en: "Untitled Meeting",
+      hi: "शीर्षकहीन बैठक",
+      bn: "শিরোনামহীন সভা",
+      ta: "தலைப்பு இல்லாத கூட்டம்",
+      mr: "शीर्षक नसलेली बैठक"
+    },
+    lokSabhaSession: {
+      en: "Lok Sabha Session",
+      hi: "लोक सभा सत्र",
+      bn: "লোকসভা অধিবেশন",
+      ta: "மக்களவை அமர்வு",
+      mr: "लोकसभा सत्र"
+    },
+    // Lok Sabha specific translations
+    lokSabhaSessionTracker: {
+      en: "Lok Sabha Session Tracker",
+      hi: "लोक सभा सत्र ट्रैकर",
+      bn: "লোকসভা অধিবেশন ট্র্যাকার",
+      ta: "மக்களவை அமர்வு கண்காணிப்பான்",
+      mr: "लोकसभा सत्र ट्रॅकर"
+    },
+    trackParliamentaryPerformance: {
+      en: "Track parliamentary performance and session details",
+      hi: "संसदीय प्रदर्शन और सत्र विवरण ट्रैक करें",
+      bn: "সংসদীয় কর্মক্ষমতা এবং অধিবেশনের বিবরণ ট্র্যাক করুন",
+      ta: "நாடாளுமன்ற செயல்திறன் மற்றும் அமர்வு விவரங்களை கண்காணிக்கவும்",
+      mr: "संसदीय कामगिरी आणि सत्र तपशील ट्रॅक करा"
+    },
+    newSession: {
+      en: "New Session",
+      hi: "नया सत्र",
+      bn: "নতুন অধিবেশন",
+      ta: "புதிய அமர்வு",
+      mr: "नवीन सत्र"
+    },
+    searchSessions: {
+      en: "Search sessions...",
+      hi: "सत्र खोजें...",
+      bn: "অধিবেশন অনুসন্ধান করুন...",
+      ta: "அமர்வுகளைத் தேடுங்கள்...",
+      mr: "सत्र शोधा..."
+    },
+    allStatus: {
+      en: "All Status",
+      hi: "सभी स्थिति",
+      bn: "সব স্ট্যাটাস",
+      ta: "அனைத்து நிலை",
+      mr: "सर्व स्थिती"
+    },
+    active: {
+      en: "Active",
+      hi: "सक्रिय",
+      bn: "সক্রিয়",
+      ta: "செயலில்",
+      mr: "सक्रिय"
+    },
+    completed: {
+      en: "Completed",
+      hi: "पूर्ण",
+      bn: "সম্পন্ন",
+      ta: "முடிந்தது",
+      mr: "पूर्ण"
+    },
+    allQuestionTypes: {
+      en: "All Question Types",
+      hi: "सभी प्रश्न प्रकार",
+      bn: "সব প্রশ্নের ধরন",
+      ta: "அனைத்து கேள்வி வகைகள்",
+      mr: "सर्व प्रश्न प्रकार"
+    },
+    starredQuestions: {
+      en: "Starred Questions",
+      hi: "तारांकित प्रश्न",
+      bn: "তারকা চিহ্নিত প্রশ্ন",
+      ta: "நட்சத்திர கேள்விகள்",
+      mr: "तारांकित प्रश्न"
+    },
+    unstarredQuestions: {
+      en: "Unstarred Questions",
+      hi: "अतारांकित प्रश्न",
+      bn: "তারকা চিহ্নবিহীন প্রশ্ন",
+      ta: "நட்சத்திரமில்லா கேள்விகள்",
+      mr: "अतारांकित प्रश्न"
+    },
+    listView: {
+      en: "List View",
+      hi: "सूची दृश्य",
+      bn: "তালিকা দেখুন",
+      ta: "பட்டியல் காட்சி",
+      mr: "यादी दृश्य"
+    },
+    calendarView: {
+      en: "Calendar View",
+      hi: "कैलेंडर दृश्य",
+      bn: "ক্যালেন্ডার দেখুন",
+      ta: "நாட்காட்டி காட்சி",
+      mr: "कॅलेंडर दृश्य"
+    },
+    statisticsView: {
+      en: "Statistics View",
+      hi: "आंकड़े दृश्य",
+      bn: "পরিসংখ্যান দেখুন",
+      ta: "புள்ளிவிவர காட்சி",
+      mr: "आकडेवारी दृश्य"
+    },
+    noSessionsFound: {
+      en: "No sessions found",
+      hi: "कोई सत्र नहीं मिला",
+      bn: "কোন অধিবেশন পাওয়া যায়নি",
+      ta: "அமர்வுகள் எதுவும் கிடைக்கவில்லை",
+      mr: "कोणतेही सत्र सापडले नाही"
+    },
+    tryAdjustingSearch: {
+      en: "Try adjusting your search or filters",
+      hi: "अपनी खोज या फ़िल्टर को समायोजित करने का प्रयास करें",
+      bn: "আপনার অনুসন্ধান বা ফিল্টার সামঞ্জস্য করার চেষ্টা করুন",
+      ta: "உங்கள் தேடல் அல்லது வடிப்பான்களை சரிசெய்ய முயற்சிக்கவும்",
+      mr: "तुमची शोध किंवा फिल्टर समायोजित करण्याचा प्रयत्न करा"
+    },
+    getStartedCreatingSession: {
+      en: "Get started by creating your first session",
+      hi: "अपना पहला सत्र बनाकर शुरू करें",
+      bn: "আপনার প্রথম অধিবেশন তৈরি করে শুরু করুন",
+      ta: "உங்கள் முதல் அமर்வை உருவாக்குவதன் மூலம் தொடங்குங்கள்",
+      mr: "तुमचा पहिला सत्र तयार करून सुरुवात करा"
+    },
+    createSession: {
+      en: "Create Session",
+      hi: "सत्र बनाएं",
+      bn: "অধিবেশন তৈরি করুন",
+      ta: "அமर்வை உருவாக்குங்கள்",
+      mr: "सत्र तयार करा"
+    },
+    // Session Card translations
+    viewDetails: {
+      en: "View Details",
+      hi: "विवरण देखें",
+      bn: "বিস্তারিত দেখুন",
+      ta: "விவரங்களைக் காண்க",
+      mr: "तपशील पहा"
+    },
+    hideDetails: {
+      en: "Hide Details",
+      hi: "विवरण छिपाएं",
+      bn: "বিস্তারিত লুকান",
+      ta: "விவரங்களை மறைக்கவும்",
+      mr: "तपशील लपवा"
+    },
+    edit: {
+      en: "Edit",
+      hi: "संपादित करें",
+      bn: "সম্পাদনা করুন",
+      ta: "திருத்து",
+      mr: "संपादित करा"
+    },
+    delete: {
+      en: "Delete",
+      hi: "हटाएं",
+      bn: "মুছুন",
+      ta: "அழி",
+      mr: "हटवा"
+    },
+    totalQuestions: {
+      en: "Total Questions",
+      hi: "कुल प्रश्न",
+      bn: "মোট প্রশ্ন",
+      ta: "மொத்த கேள்விகள்",
+      mr: "एकूण प्रश्न"
+    },
+    starredQuestionsCount: {
+      en: "Starred Questions",
+      hi: "तारांकित प्रश्न",
+      bn: "তারকা চিহ্নিত প্রশ্ন",
+      ta: "நட்சத்திர கேள்விகள்",
+      mr: "तारांकित प्रश्न"
+    },
+    unstarredQuestionsCount: {
+      en: "Unstarred Questions",
+      hi: "अतारांकित प्रश्न",
+      bn: "তারকা চিহ্নবিহীন প্রশ্ন",
+      ta: "நட்சத்திரமில்லா கேள்விகள்",
+      mr: "अतारांकित प्रश्न"
+    },
+    answeredQuestions: {
+      en: "Answered Questions",
+      hi: "उत्तरित प्रश्न",
+      bn: "উত্তরিত প্রশ্ন",
+      ta: "பதிலளிக்கப்பட்ட கேள்விகள்",
+      mr: "उत्तर दिलेले प्रश्न"
+    },
+    pendingQuestions: {
+      en: "Pending Questions",
+      hi: "लंबित प्रश्न",
+      bn: "অপেক্ষমান প্রশ্ন",
+      ta: "நிலுவையிலுள்ள கேள்விகள்",
+      mr: "प्रलंबित प्रश्न"
+    },
+    topMinistries: {
+      en: "Top Ministries",
+      hi: "शीर्ष मंत्रालय",
+      bn: "শীর্ষ মন্ত্রণালয়",
+      ta: "முன்னணி அமைச்சகங்கள்",
+      mr: "शीर्ष मंत्रालये"
+    },
+    questions: {
+      en: "Questions",
+      hi: "प्रश्न",
+      bn: "প্রশ্ন",
+      ta: "கேள்விகள்",
+      mr: "प्रश्न"
+    },
+    type: {
+      en: "Type",
+      hi: "प्रकार",
+      bn: "ধরন",
+      ta: "வகை",
+      mr: "प्रकार"
+    },
+    ministry: {
+      en: "Ministry",
+      hi: "मंत्रालय",
+      bn: "মন্ত্রণালয়",
+      ta: "அமைச்சகம்",
+      mr: "मंत्रालय"
+    },
+    subject: {
+      en: "Subject",
+      hi: "विषय",
+      bn: "বিষয়",
+      ta: "பொருள்",
+      mr: "विषय"
+    },
+    outcome: {
+      en: "Outcome",
+      hi: "परिणाम",
+      bn: "ফলাফল",
+      ta: "முடிவு",
+      mr: "परिणाम"
+    },
+    answered: {
+      en: "Answered",
+      hi: "उत्तरित",
+      bn: "উত্তরিত",
+      ta: "பதிலளிக்கப்பட்டது",
+      mr: "उत्तर दिले"
+    },
+    pending: {
+      en: "Pending",
+      hi: "लंबित",
+      bn: "অপেক্ষমান",
+      ta: "நிலுவையில்",
+      mr: "प्रलंबित"
+    },
+    dateAsked: {
+      en: "Date Asked",
+      hi: "पूछने की तारीख",
+      bn: "জিজ্ঞাসার তারিখ",
+      ta: "கேட்கப்பட்ட தேதி",
+      mr: "विचारलेली तारीख"
+    },
+    // Session Form translations
+    sessionDetails: {
+      en: "Session Details",
+      hi: "सत्र विवरण",
+      bn: "অধিবেশনের বিবরণ",
+      ta: "அமர்வு விவரங்கள்",
+      mr: "सत्र तपशील"
+    },
+    sessionNumber: {
+      en: "Session Number",
+      hi: "सत्र संख्या",
+      bn: "অধিবেশন সংখ্যা",
+      ta: "அமர்வு எண்",
+      mr: "सत्र क्रमांक"
+    },
+    sessionDate: {
+      en: "Session Date",
+      hi: "सत्र तिथि",
+      bn: "অধিবেশনের তারিখ",
+      ta: "அமர்வு தேதி",
+      mr: "सत्र तारीख"
+    },
+    enterSessionNumber: {
+      en: "Enter session number (e.g., 17th Lok Sabha - Session 1)",
+      hi: "सत्र संख्या दर्ज करें (जैसे, 17वीं लोक सभा - सत्र 1)",
+      bn: "অধিবেশন সংখ্যা লিখুন (যেমন, ১৭তম লোকসভা - অধিবেশন ১)",
+      ta: "அமர்வு எண்ணை உள்ளிடவும் (எ.கா., 17வது மக்களவை - அமர்வு 1)",
+      mr: "सत्र क्रमांक प्रविष्ट करा (उदा., 17वी लोकसभा - सत्र 1)"
+    },
+    selectDate: {
+      en: "Select date",
+      hi: "तिथि चुनें",
+      bn: "তারিখ নির্বাচন করুন",
+      ta: "தேதியைத் தேர்ந்தெடுக்கவும்",
+      mr: "तारीख निवडा"
+    },
+    saveSession: {
+      en: "Save Session",
+      hi: "सत्र सहेजें",
+      bn: "অধিবেশন সংরক্ষণ করুন",
+      ta: "அமर்வை சேமிக்கவும்",
+      mr: "सत्र जतन करा"
+    },
+    updateSession: {
+      en: "Update Session",
+      hi: "सत्र अपडेट करें",
+      bn: "অধিবেশন আপডেট করুন",
+      ta: "அமர்வை புதுப்பிக்கவும்",
+      mr: "सत्र अपडेट करा"
+    },
+    cancel: {
+      en: "Cancel",
+      hi: "रद्द करें",
+      bn: "বাতিল করুন",
+      ta: "ரத்து",
+      mr: "रद्द करा"
+    },
+    sessionNumberRequired: {
+      en: "Session number is required",
+      hi: "सत्र संख्या आवश्यक है",
+      bn: "অধিবেশন সংখ্যা প্রয়োজন",
+      ta: "அமர्वு எண் தேவை",
+      mr: "सत्र क्रमांक आवश्यक आहे"
+    },
+    sessionDateRequired: {
+      en: "Session date is required",
+      hi: "सत्र तिथि आवश्यक है",
+      bn: "অধিবেশনের তারিখ প্রয়োজন",
+      ta: "அமர்வு தேतி தேவை",
+      mr: "सत्र तारीख आवश्यक आहे"
+    },
     dashboardOverview: {
       en: "Dashboard Overview",
       hi: "डैशबोर्ड अवलोकन",
@@ -809,6 +1619,13 @@ export const fallbackTranslations = {
 
   // Common labels used across components
   common: {
+    language: {
+      en: "Language",
+      hi: "भाषा",
+      bn: "ভাষা",
+      ta: "மொழி",
+      mr: "भाषा"
+    },
     loading: {
       en: "Loading...",
       hi: "लोड हो रहा है...",
@@ -1261,6 +2078,311 @@ export const fallbackTranslations = {
       ta: "ஒதுக்கப்பட்டது",
       mr: "नियुक्त केले",
     }
+  },
+
+  // Additional Lok Sabha translations
+  deleteConfirmation: {
+    en: "Are you sure you want to delete this session?",
+    hi: "क्या आप वाकई इस सत्र को हटाना चाहते हैं?",
+    bn: "আপনি কি নিশ্চিত যে আপনি এই অধিবেশনটি মুছতে চান?",
+    ta: "இந்த அமர்வை நீக்க விரும்புகிறீர்களா?",
+    mr: "तुम्हाला खात्री आहे की तुम्ही हे सत्र हटवू इच्छिता?"
+  },
+  // Session Stats translations
+  sessionStatistics: {
+    en: "Session Statistics",
+    hi: "सत्र आंकड़े",
+    bn: "অধিবেশনের পরিসংখ্যান",
+    ta: "அமர்வு புள்ளிவிவரங்கள்",
+    mr: "सत्र आकडेवारी"
+  },
+  performanceMetrics: {
+    en: "Performance Metrics",
+    hi: "प्रदर्शन मेट्रिक्स",
+    bn: "কর্মক্ষমতা মেট্রিক্স",
+    ta: "செயல்திறன் அளவீடுகள்",
+    mr: "कामगिरी मेट्रिक्स"
+  },
+  questionsPerSession: {
+    en: "Questions per Session",
+    hi: "प्रति सत्र प्रश्न",
+    bn: "প্রতি অধিবেশনে প্রশ্ন",
+    ta: "ஒரு அमர்வுக்கு கேள்விகள்",
+    mr: "प्रति सत्र प्रश्न"
+  },
+  topPerformingMinistries: {
+    en: "Top Performing Ministries",
+    hi: "शीर्ष प्रदर्शन वाले मंत्रालय",
+    bn: "শীর্ষ কর্মক্ষमতা মন্ত্রণালয়",
+    ta: "முன்னணி செயல்திறன் அமைச்சகங்கள்",
+    mr: "शीर्ष कामगिरी मंत्रालये"
+  },
+  // Session Calendar translations
+  sessionCalendar: {
+    en: "Session Calendar",
+    hi: "सत्र कैलेंडर",
+    bn: "অধিবেশন ক্যালেন্ডার",
+    ta: "அமர்வு நாட்காட்டி",
+    mr: "सत्र कॅलेंडर"
+  },
+  noSessionsOnDate: {
+    en: "No sessions on this date",
+    hi: "इस तिथि पर कोई सत्र नहीं",
+    bn: "এই তারিখে কোন অধিবেশন নেই",
+    ta: "இந்த தேதியில் அமர்வுகள் எதுவும் இல்லை",
+    mr: "या तारखेला कोणतेही सत्र नाही"
+  },
+  sessionsOnDate: {
+    en: "sessions on this date",
+    hi: "इस तिथि पर सत्र",
+    bn: "এই তারিখে অধিবেশন",
+    ta: "இந்த தேதியில் அமர்வுகள்",
+    mr: "या तारखेला सत्र"
+  },
+  progress: {
+    en: "Progress",
+    hi: "प्रगति",
+    bn: "অগ্রগতি",
+    ta: "முன்னேற்றம்",
+    mr: "प्रगती"
+  },
+  answer: {
+    en: "Answer",
+    hi: "उत्तर",
+    bn: "উত্তর",
+    ta: "பதில்",
+    mr: "उत्तर"
+  },
+  noQuestionsRecorded: {
+    en: "No questions recorded for this session.",
+    hi: "इस सत्र के लिए कोई प्रश्न दर्ज नहीं किया गया।",
+    bn: "এই অধিবেশনের জন্য কোন প্রশ্ন রেকর্ড করা হয়নি।",
+    ta: "இந்த அமர்வுக்கு எந்த கேள்விகளும் பதிவு செய்யப்படவில்லை.",
+    mr: "या सत्रासाठी कोणतेही प्रश्न नोंदवले नाहीत."
+  },
+  performanceTracker: {
+    en: "Performance Tracker",
+    hi: "प्रदर्शन ट्रैकर",
+    bn: "কর্মক্ষমতা ট্র্যাকার",
+    ta: "செயல்திறன் கண்காணிப்பான்",
+    mr: "कामगिरी ट्रॅकर"
+  },
+  questionsAdded: {
+    en: "questions added",
+    hi: "प्रश्न जोड़े गए",
+    bn: "প্রশ্ন যোগ করা হয়েছে",
+    ta: "கேள்விகள் சேர்க்கப்பட்டன",
+    mr: "प्रश्न जोडले"
+  },
+  addNewQuestion: {
+    en: "Add New Question",
+    hi: "नया प्रश्न जोड़ें",
+    bn: "নতুন প্রশ্ন যোগ করুন",
+    ta: "புதிய கேள்வியைச் சேர்க்கவும்",
+    mr: "नवीन प्रश्न जोडा"
+  },
+  selectMinistry: {
+    en: "Select Ministry",
+    hi: "मंत्रालय चुनें",
+    bn: "মন্ত্রণালয় নির্বাচন করুন",
+    ta: "அமைச்சகத்தைத் தேர்ந்தெடுக்கவும்",
+    mr: "मंत्रालय निवडा"
+  },
+  enterQuestionSubject: {
+    en: "Enter question subject...",
+    hi: "प्रश्न का विषय दर्ज करें...",
+    bn: "প্রশ्नের বিষয় লিখুন...",
+    ta: "கேள்வியின் பொருளை உள்ளிடவும்...",
+    mr: "प्रश्नाचा विषय प्रविष्ट करा..."
+  },
+  answerTextOptional: {
+    en: "Answer Text (Optional)",
+    hi: "उत्तर पाठ (वैकल्पिक)",
+    bn: "উত্তর টেক্সট (ঐচ্ছিক)",
+    ta: "பதில் உரை (விருப்ப)",
+    mr: "उत्तर मजकूर (पर्यायी)"
+  },
+  enterAnswerTextIfAvailable: {
+    en: "Enter answer text if available...",
+    hi: "उपलब्ध हो तो उत्तर पाठ दर्ज करें...",
+    bn: "উপলব্ধ হলে উত্তর টেক্সট লিখুন...",
+    ta: "கிடைக்குமானால் பதில் உரையை உள்ளிடவும்...",
+    mr: "उपलब्ध असल्यास उत्तर मजकूर प्रविष्ट करा..."
+  },
+  addQuestion: {
+    en: "Add Question",
+    hi: "प्रश्न जोड़ें",
+    bn: "প্রশ্ন যোগ করুন",
+    ta: "கேள்வியைச் சேர்க்கவும்",
+    mr: "प्रश्न जोडा"
+  },
+  addedQuestions: {
+    en: "Added Questions",
+    hi: "जोड़े गए प्रश्न",
+    bn: "যোগ করা প্রশ্ন",
+    ta: "சேர்க்கப்பட்ட கேள்விகள்",
+    mr: "जोडलेले प्रश्न"
+  },
+  question: {
+    en: "Question",
+    hi: "प्रश्न",
+    bn: "প্রশ्न",
+    ta: "கேள்வி",
+    mr: "प्रश्न"
+  },
+  totalQuestionsAsked: {
+    en: "Total Questions Asked",
+    hi: "कुल पूछे गए प्रश्न",
+    bn: "মোট জিজ্ঞাসিত প্রশ्न",
+    ta: "மொத்த கேட்கப்பட்ட கேள்விகள்",
+    mr: "एकूण विचारलेले प्रश्न"
+  },
+  starredVsUnstarredRatio: {
+    en: "Starred vs Unstarred Ratio",
+    hi: "तारांकित बनाम अतारांकित अनुपात",
+    bn: "তারকা চিহ্নিত বনাম তারকা চিহ্নবিহীন অনুপাত",
+    ta: "நட்சத்திர vs நட்சத்திரமில்லா விகிதம்",
+    mr: "तारांकित विरुद्ध अतारাংकित प्रमाण"
+  },
+  answeredVsPendingRatio: {
+    en: "Answered vs Pending Ratio",
+    hi: "उत्तरित बनाम लंबित अनुपात",
+    bn: "উত্তরিত বনাম অপেক্ষমান অনুপাত",
+    ta: "பதிலளிக்கப்பட்ட vs நிலுவையில் விகிதம்",
+    mr: "उत्तर दिलेले विरुद्ध प्रलंबित प्रमाण"
+  },
+  performanceRating: {
+    en: "Performance Rating",
+    hi: "प्रदर्शन रेटिंग",
+    bn: "কর্মক্ষमতা রেটিং",
+    ta: "செயல்திறன் மதிப்பீடு",
+    mr: "कामगिरी रेटिंग"
+  },
+  top3MinistriesAddressed: {
+    en: "Top 3 Ministries Addressed",
+    hi: "शीर्ष 3 मंत्रालय संबोधित",
+    bn: "শীর্ষ ৩ মন্ত্রণালয় সম্বোধন",
+    ta: "முன்னணி 3 அமைச்சகங்கள் கையாளப்பட்டன",
+    mr: "शीर्ष 3 मंत्रालये संबोधित"
+  },
+  ofTotalQuestions: {
+    en: "of total questions",
+    hi: "कुल प्रश्नों में से",
+    bn: "মোট প্রশ্নের মধ্যে",
+    ta: "மொத்த கேள்விகளில்",
+    mr: "एकूण प्रश्नांपैकी"
+  },
+  detailedAnalytics: {
+    en: "Detailed Analytics",
+    hi: "विस्तृत विश्लेषण",
+    bn: "বিস্তারিত বিশ্লেষণ",
+    ta: "விரிவான பகுப்பாய்வு",
+    mr: "तपशीलवार विश्लेषण"
+  },
+  questionTypeDistribution: {
+    en: "Question Type Distribution",
+    hi: "प्रश्न प्रकार वितरण",
+    bn: "প্রশ্নের ধরন বিতরণ",
+    ta: "கேள்வி வகை பரவல்",
+    mr: "प्रश्न प्रकार वितरण"
+  },
+  responseStatus: {
+    en: "Response Status",
+    hi: "प्रतिक्रिया स्थिति",
+    bn: "প্রতিক্রিয়ার অবস্থা",
+    ta: "பதில் நிலை",
+    mr: "प्रतिसाद स्थिती"
+  },
+  avgQuestionsPerSession: {
+    en: "Avg Questions/Session",
+    hi: "औसत प्रश्न/सत्र",
+    bn: "গড় প্রশ্ন/অধিবেশন",
+    ta: "சராசரி கேள்விகள்/அமर்வு",
+    mr: "सरासरी प्रश्न/सत्र"
+  },
+  responseRate: {
+    en: "Response Rate",
+    hi: "प्रतिक्रिया दर",
+    bn: "প্রতিক্রিয়ার হার",
+    ta: "பதில் விகிதம்",
+    mr: "प्रतिसाद दर"
+  },
+  efficiencyScore: {
+    en: "Efficiency Score",
+    hi: "दक्षता स्कोर",
+    bn: "দক্ষতা স্কোর",
+    ta: "திறன் மதிப்பெண்",
+    mr: "कार्यक्षमता स्कोर"
+  },
+  keyInsights: {
+    en: "Key Insights",
+    hi: "मुख्य अंतर्दृष्टि",
+    bn: "মূল অন্তর্দৃষ্টি",
+    ta: "முக்கிய நுண்ணறிவுகள்",
+    mr: "मुख्य अंतर्दृष्टी"
+  },
+  viewByMonth: {
+    en: "View by Month",
+    hi: "महीने के अनुसार देखें",
+    bn: "মাস অনুযায়ী দেখুন",
+    ta: "மாதத்தின் படி காண்க",
+    mr: "महिन्यानुसार पहा"
+  },
+  legend: {
+    en: "Legend",
+    hi: "किंवदंती",
+    bn: "কিংবদন্তি",
+    ta: "விளக்கம்",
+    mr: "शोध"
+  },
+  completedSession: {
+    en: "Completed Session",
+    hi: "पूर्ण सत्र",
+    bn: "সম্পন্ন অধিবেশন",
+    ta: "முடிந்த அமர்வு",
+    mr: "पूर्ण सत्र"
+  },
+  activeSession: {
+    en: "Active Session",
+    hi: "सक्रिय सत्र",
+    bn: "সক্রিয় অধিবেশন",
+    ta: "செயலில் உள்ள அமர்வு",
+    mr: "सक्रिय सत्र"
+  },
+  hasStarredQuestions: {
+    en: "Has Starred Questions",
+    hi: "तारांकित प्रश्न हैं",
+    bn: "তারকা চিহ্নিত প্রশ্ন আছে",
+    ta: "நட்சத்திர கேள்விகள் உள்ளன",
+    mr: "तारांकित प्रश्न आहेत"
+  },
+  unstarredQuestionsOnly: {
+    en: "Unstarred Questions Only",
+    hi: "केवल अतारांकित प्रश्न",
+    bn: "শুধুমাত্র তারকা চিহ্নবিহীন প্রশ্ন",
+    ta: "நட்சத்திரமில்லா கேள்விகள் மட்டும்",
+    mr: "फक्त अतारांकित प्रश्न"
+  },
+  sessionDay: {
+    en: "Session Day",
+    hi: "सत्र दिवस",
+    bn: "অধিবেশনের দিন",
+    ta: "அமர்வு நாள்",
+    mr: "सत्र दिवस"
+  },
+  today: {
+    en: "Today",
+    hi: "आज",
+    bn: "আজ",
+    ta: "இன்று",
+    mr: "आज"
+  },
+  totalSessions: {
+    en: "Total Sessions",
+    hi: "कुल सत्र",
+    bn: "মোট অধিবেশন",
+    ta: "மொத்த அமர்வுகள்",
+    mr: "एकूण सत्रे"
   },
 
   // Sent Grievance Letters section

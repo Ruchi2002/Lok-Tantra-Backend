@@ -71,15 +71,21 @@ def extract_token_from_request(request: Request, header_token: Optional[str] = N
     1. Authorization header (Bearer token)
     2. Cookie (access_token)
     """
+    # Debug logging
+    logger.info(f"Extracting token from request: header_token={bool(header_token)}, cookies={dict(request.cookies)}")
+    
     # First try Authorization header
     if header_token:
+        logger.info("Using Authorization header token")
         return header_token
     
     # Then try cookie
     cookie_token = cookie_manager.get_token_from_cookies(request)
     if cookie_token:
+        logger.info("Using cookie token")
         return cookie_token
     
+    logger.warning("No token found in request")
     return None
 
 def get_current_user(
@@ -92,7 +98,10 @@ def get_current_user(
     # Extract token from multiple sources
     token = extract_token_from_request(request, header_token)
     
+    logger.info(f"get_current_user called: token={bool(token)}")
+    
     if not token:
+        logger.warning("No token found in request")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
@@ -101,15 +110,19 @@ def get_current_user(
     
     payload = decode_token(token)
     if not payload:
+        logger.warning("Failed to decode token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
+    logger.info(f"Token decoded successfully: payload={payload}")
+    
     # Check token type
     token_type = payload.get("type")
     if token_type != "access":
+        logger.warning(f"Invalid token type: {token_type}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type",

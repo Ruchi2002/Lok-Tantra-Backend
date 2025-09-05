@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTimes, FaSave, FaSpinner } from 'react-icons/fa';
+import { FaTimes, FaSave, FaSpinner, FaPaperclip, FaFileAlt, FaTrash } from 'react-icons/fa';
 import { useLanguage } from '../../context/LanguageContext';
 import { fallbackTranslations } from '../../utils/fallbackTranslation';
 import { useUpdateReceivedLetterMutation } from '../../store/api/appApi';
@@ -20,9 +20,12 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
     received_date: '',
     due_date: '',
     response_content: '',
-    notes: ''
+    notes: '',
+    attachments: ''
   });
   const [errors, setErrors] = useState({});
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
   // Sample data for dropdowns - in a real app, these would come from API
   const categories = ['Education', 'Health', 'Infrastructure', 'Business', 'Policy', 'Other'];
@@ -50,9 +53,18 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
         received_date: letter.received_date ? new Date(letter.received_date).toISOString().split('T')[0] : '',
         due_date: letter.due_date ? new Date(letter.due_date).toISOString().split('T')[0] : '',
         response_content: letter.response_content || '',
-        notes: letter.notes || ''
+        notes: letter.notes || '',
+        attachments: letter.attachments || ''
       });
       setErrors({});
+      setSelectedFiles([]);
+      
+      // Parse existing attachments
+      if (letter.attachments) {
+        setExistingAttachments(letter.attachments.split(',').map(att => att.trim()).filter(att => att));
+      } else {
+        setExistingAttachments([]);
+      }
     }
   }, [isOpen, letter]);
 
@@ -125,14 +137,75 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
     }
   };
 
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(prev => [...prev, ...files]);
+    
+    // Update formData with file names
+    const allFileNames = [
+      ...existingAttachments,
+      ...selectedFiles.map(f => f.name),
+      ...files.map(f => f.name)
+    ].join(', ');
+    
+    setFormData(prev => ({
+      ...prev,
+      attachments: allFileNames
+    }));
+  };
+
+  // Remove new file from selection
+  const removeNewFile = (index) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    
+    // Update formData with remaining file names
+    const allFileNames = [
+      ...existingAttachments,
+      ...newFiles.map(f => f.name)
+    ].join(', ');
+    
+    setFormData(prev => ({
+      ...prev,
+      attachments: allFileNames
+    }));
+  };
+
+  // Remove existing attachment
+  const removeExistingAttachment = (index) => {
+    const newExistingAttachments = existingAttachments.filter((_, i) => i !== index);
+    setExistingAttachments(newExistingAttachments);
+    
+    // Update formData with remaining file names
+    const allFileNames = [
+      ...newExistingAttachments,
+      ...selectedFiles.map(f => f.name)
+    ].join(', ');
+    
+    setFormData(prev => ({
+      ...prev,
+      attachments: allFileNames
+    }));
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   if (!isOpen || !letter) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             {getTranslatedLabel('editLetter') || 'Edit Letter'} - #{letter.id}
           </h2>
           <button
@@ -140,16 +213,16 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
             className="text-gray-400 hover:text-gray-600 transition-colors"
             disabled={isLoading}
           >
-            <FaTimes size={20} />
+            <FaTimes size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Sender Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900">
                 {getTranslatedLabel('senderInformation') || 'Sender Information'}
               </h3>
               
@@ -222,7 +295,7 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
 
             {/* Letter Details */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900">
                 {getTranslatedLabel('letterDetails') || 'Letter Details'}
               </h3>
               
@@ -293,7 +366,7 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {getTranslatedLabel('receivedDate') || 'Received Date'}
@@ -378,19 +451,102 @@ const EditLetterModal = ({ isOpen, onClose, onSuccess, letter }) => {
             />
           </div>
 
+          {/* Attachments */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              <FaPaperclip className="text-gray-600" />
+              {getTranslatedLabel('attachments') || 'Attachments'}
+            </label>
+            <div className="space-y-3">
+              {/* File Upload Input */}
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="edit-file-upload"
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                />
+                <label
+                  htmlFor="edit-file-upload"
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                >
+                  <FaPaperclip className="text-sm" />
+                  <span>Click to upload additional documents</span>
+                </label>
+              </div>
+
+              {/* Existing Attachments */}
+              {existingAttachments.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Existing Attachments:</p>
+                  {existingAttachments.map((attachment, index) => (
+                    <div
+                      key={`existing-${index}`}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FaFileAlt className="text-blue-500 text-sm" />
+                        <span className="text-sm font-medium text-gray-800">{attachment}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingAttachment(index)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Remove attachment"
+                      >
+                        <FaTrash className="text-sm" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New Selected Files */}
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">New Files to Upload:</p>
+                  {selectedFiles.map((file, index) => (
+                    <div
+                      key={`new-${index}`}
+                      className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FaFileAlt className="text-blue-500 text-sm" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{file.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(index)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Remove file"
+                      >
+                        <FaTrash className="text-sm" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
               disabled={isLoading}
             >
               {getTranslatedLabel('cancel') || 'Cancel'}
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
               disabled={isLoading}
             >
               {isLoading ? (

@@ -7,12 +7,20 @@ export const AuthProvider = ({ children }) => {
   const dispatch = useDispatch()
   const [isInitialized, setIsInitialized] = useState(false)
   
+  // Check if we have a token before making the API call
+  const hasToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+  
+  console.log('AuthProvider - hasToken:', hasToken) // Debug log
+  
   // Check if user is authenticated on app start
   const { data: user, error, isLoading } = useGetCurrentUserQuery(undefined, {
-    // Don't skip - let it check for existing cookies
+    // Skip the query if no token exists
+    skip: !hasToken,
     refetchOnFocus: false,
     refetchOnReconnect: false,
   })
+  
+  console.log('AuthProvider - Query result:', { user: !!user, error, isLoading }) // Debug log
   
   // Update loading state in Redux
   useEffect(() => {
@@ -20,20 +28,30 @@ export const AuthProvider = ({ children }) => {
   }, [isLoading, dispatch])
   
   useEffect(() => {
+    console.log('AuthProvider - Effect triggered:', { user: !!user, error, hasToken }) // Debug log
+    
     if (user && !error) {
       // User is authenticated
+      console.log('AuthProvider - Setting authenticated user:', user) // Debug log
       dispatch(setAuthenticated({
         user: user,
         permissions: user.permissions || [],
         roles: user.role ? [user.role] : [],
       }))
     } else if (error && error.status === 401) {
-      // User is not authenticated
+      // User is not authenticated - clear any stale tokens
+      console.log('AuthProvider - 401 error, clearing tokens') // Debug log
+      localStorage.removeItem('accessToken')
+      sessionStorage.removeItem('accessToken')
+      dispatch(logout())
+    } else if (!hasToken) {
+      // No token exists, user is not authenticated
+      console.log('AuthProvider - No token, setting logout state') // Debug log
       dispatch(logout())
     }
     
     setIsInitialized(true)
-  }, [user, error, dispatch])
+  }, [user, error, dispatch, hasToken])
   
   // Show loading spinner while checking authentication
   if (isLoading && !isInitialized) {

@@ -28,8 +28,6 @@ const MeetingPrograms = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'stats'
-  const [kpis, setKpis] = useState({});
-  const [stats, setStats] = useState({});
   const [users, setUsers] = useState([]);
 
   // RTK Query hooks
@@ -43,31 +41,6 @@ const MeetingPrograms = () => {
   const [createMeeting, { isLoading: isCreating }] = useCreateMeetingProgramMutation();
   const [updateMeeting, { isLoading: isUpdating }] = useUpdateMeetingProgramMutation();
   const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingProgramMutation();
-
-  // Fetch additional data (these might need to be added to appApi)
-  const fetchKPIs = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/meeting-programs/kpis/', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setKpis(data);
-    } catch (error) {
-      console.error('Error fetching KPIs:', error);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/meeting-programs/stats/', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
 
   const fetchUsers = async () => {
     try {
@@ -85,8 +58,6 @@ const MeetingPrograms = () => {
     try {
       await createMeeting(meetingData).unwrap();
       setShowForm(false);
-      fetchKPIs();
-      fetchStats();
     } catch (error) {
       console.error('Error creating meeting:', error);
     }
@@ -100,8 +71,6 @@ const MeetingPrograms = () => {
       }).unwrap();
       setShowForm(false);
       setEditingMeeting(null);
-      fetchKPIs();
-      fetchStats();
     } catch (error) {
       console.error('Error updating meeting:', error);
     }
@@ -111,8 +80,6 @@ const MeetingPrograms = () => {
     if (window.confirm('Are you sure you want to delete this meeting?')) {
       try {
         await deleteMeeting(meetingId).unwrap();
-        fetchKPIs();
-        fetchStats();
       } catch (error) {
         console.error('Error deleting meeting:', error);
       }
@@ -186,7 +153,7 @@ const MeetingPrograms = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className=" mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -350,10 +317,7 @@ const MeetingPrograms = () => {
         )}
 
         {viewMode === 'stats' && (
-          <MeetingStats 
-            stats={stats} 
-            kpis={kpis}
-          />
+          <MeetingStats />
         )}
       </div>
 

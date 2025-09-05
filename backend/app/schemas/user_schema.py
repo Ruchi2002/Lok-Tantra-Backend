@@ -29,6 +29,15 @@ class UserRead(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+# ✅ For Admin Viewing (includes plain password)
+class UserReadWithPassword(UserBase):
+    id: str
+    plain_password: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 # ✅ For Updating User (partial) - never update password through this schema
 class UserUpdate(BaseModel):
@@ -39,3 +48,12 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
     role_id: Optional[str] = None  # Fixed: Changed from int to str (UUID)
     tenant_id: Optional[str] = None  # Fixed: Changed from int to str (UUID)
+
+# ✅ For Creating Field Agent specifically
+class FieldAgentCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: Optional[str] = None
+    area: Optional[str] = None  # Assigned area for the field agent
+    description: Optional[str] = None  # Additional description/notes

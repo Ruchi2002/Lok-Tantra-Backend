@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import { authApi } from './api/authApi'
 import { appApi } from './api/appApi'
 import { sentLettersApi } from './api/sentLettersApi'
+import { lettersApi } from './api/lettersApi'
 import authReducer from './authSlice'
 
 export const store = configureStore({
@@ -10,6 +11,7 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [appApi.reducerPath]: appApi.reducer,
     [sentLettersApi.reducerPath]: sentLettersApi.reducer,
+    [lettersApi.reducerPath]: lettersApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -50,12 +52,14 @@ export const store = configureStore({
           'authApi',
           'appApi', 
           'sentLettersApi',
+          'lettersApi',
         ],
       },
     }).concat(
       authApi.middleware, 
       appApi.middleware, 
-      sentLettersApi.middleware
+      sentLettersApi.middleware,
+      lettersApi.middleware
     ),
   devTools: process.env.NODE_ENV !== 'production',
 })

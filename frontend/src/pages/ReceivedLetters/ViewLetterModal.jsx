@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTimes, FaEdit, FaPrint, FaDownload, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaUser, FaTag, FaExclamationTriangle } from 'react-icons/fa';
+import { FaTimes, FaEdit, FaPrint, FaDownload, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaUser, FaTag, FaExclamationTriangle, FaPaperclip, FaFileAlt } from 'react-icons/fa';
 import { useLanguage } from '../../context/LanguageContext';
 import { fallbackTranslations } from '../../utils/fallbackTranslation';
 
@@ -73,65 +73,67 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
   if (!isOpen || !letter) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 border-b border-gray-200 gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               {getTranslatedLabel('letterDetails') || 'Letter Details'}
             </h2>
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(letter.status)}`}>
-              {letter.status}
-            </span>
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(letter.priority)}`}>
-              {letter.priority}
-            </span>
-            {isOverdue() && (
-              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
-                <FaExclamationTriangle size={10} />
-                {getTranslatedLabel('overdue') || 'Overdue'}
+            <div className="flex flex-wrap gap-1 sm:gap-2">
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(letter.status)}`}>
+                {letter.status}
               </span>
-            )}
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(letter.priority)}`}>
+                {letter.priority}
+              </span>
+              {isOverdue() && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
+                  <FaExclamationTriangle size={10} />
+                  {getTranslatedLabel('overdue') || 'Overdue'}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => onEdit(letter)}
-              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-1 sm:p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
               title={getTranslatedLabel('editLetter') || 'Edit Letter'}
             >
-              <FaEdit size={16} />
+              <FaEdit size={14} className="sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={() => window.print()}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+              className="p-1 sm:p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
               title={getTranslatedLabel('printLetter') || 'Print Letter'}
             >
-              <FaPrint size={16} />
+              <FaPrint size={14} className="sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="p-1 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               title={getTranslatedLabel('close') || 'Close'}
             >
-              <FaTimes size={16} />
+              <FaTimes size={14} className="sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Letter ID and Basic Info */}
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
                 {letter.subject}
               </h3>
               <p className="text-sm text-gray-600">
                 {getTranslatedLabel('letterId') || 'Letter ID'}: #{letter.id}
               </p>
             </div>
-            <div className="text-right text-sm text-gray-600">
+            <div className="text-left sm:text-right text-sm text-gray-600">
               <p>{getTranslatedLabel('receivedOn') || 'Received on'}: {formatDate(letter.received_date)}</p>
               {letter.due_date && (
                 <p className={isOverdue() ? 'text-red-600 font-medium' : ''}>
@@ -147,7 +149,7 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
               <FaUser />
               {getTranslatedLabel('senderInformation') || 'Sender Information'}
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-700">
                   {getTranslatedLabel('senderName') || 'Name'}:
@@ -190,7 +192,7 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
               <FaTag />
               {getTranslatedLabel('letterDetails') || 'Letter Details'}
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-700">
                   {getTranslatedLabel('category') || 'Category'}:
@@ -264,14 +266,25 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
           {/* Attachments */}
           {letter.attachments && (
             <div>
-              <h4 className="text-md font-semibold text-gray-900 mb-3">
+              <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <FaPaperclip className="text-gray-600" />
                 {getTranslatedLabel('attachments') || 'Attachments'}
               </h4>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <FaDownload size={14} />
-                  <span className="text-sm text-gray-900">{letter.attachments}</span>
-                </div>
+                {letter.attachments.split(',').map((attachment, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 mb-2 last:mb-0">
+                    <div className="flex items-center gap-3">
+                      <FaFileAlt className="text-blue-500 text-sm" />
+                      <span className="text-sm text-gray-900 font-medium">{attachment.trim()}</span>
+                    </div>
+                    <button
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Download attachment"
+                    >
+                      <FaDownload size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -281,7 +294,7 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
             <h4 className="text-md font-semibold text-gray-900 mb-3">
               {getTranslatedLabel('systemInformation') || 'System Information'}
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
               <div>
                 <p className="text-gray-700">
                   {getTranslatedLabel('createdOn') || 'Created on'}: {formatDateTime(letter.created_at)}
@@ -307,17 +320,17 @@ const ViewLetterModal = ({ isOpen, onClose, letter, onEdit }) => {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-gray-200">
           <button
             onClick={() => onEdit(letter)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
           >
             <FaEdit size={14} />
             {getTranslatedLabel('editLetter') || 'Edit Letter'}
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
           >
             {getTranslatedLabel('close') || 'Close'}
           </button>

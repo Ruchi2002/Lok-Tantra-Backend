@@ -32,7 +32,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.2",
     "react-select": "^5.10.1",
-    "recharts": "^3.0.0",
+    "recharts": "^3.1.2",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {

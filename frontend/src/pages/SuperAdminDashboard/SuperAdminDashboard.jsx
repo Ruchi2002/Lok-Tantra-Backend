@@ -1,8 +1,10 @@
 // src/pages/SuperAdminDashboard.jsx
 import React from "react";
 import SuperAdminSidebar from "../SuperAdminDashboard/superAdminsidebar";
-import { Outlet } from "react-router-dom"; // for nested routes
+import { Outlet, Routes, Route } from "react-router-dom"; // for nested routes
 import TenantPage from "./tenantPage";
+import AdminPage from "./adminPage";
+import DashboardPage from "./dashboardPage";
 import { LogoutButton } from "../../components/LogoutButton";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -50,10 +52,13 @@ const SuperAdminDashboard = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          {/* Nested content from routes (like TenantsPage) */}
-          
-          <TenantPage/>
+        <main className="flex-1 overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/tenantPage" element={<TenantPage />} />
+            <Route path="/adminPage" element={<AdminPage />} />
+          </Routes>
           <Outlet />
         </main>
       </div>

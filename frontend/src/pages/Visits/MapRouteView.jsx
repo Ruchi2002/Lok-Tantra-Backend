@@ -4,7 +4,8 @@ import { translateText } from "../../utils/translateText";
 import Select from "react-select";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useAppData } from '../../context/AppDataContext'; // Import the new hook
+import { useGetCitizenIssuesGeoJsonQuery } from "../../store/api/appApi";
+import { useAuth } from "../../hooks/useAuth";
 
 const fallbackLabels = {
   en: {
@@ -62,11 +63,24 @@ const createMarkerIcon = (color) => {
 };
 
 const MapRouteView = () => {
-  // Consume geoJsonData, loading, and error from context
-  const { geoJsonData, geoJsonLoading, geoJsonError } = useAppData(); 
+  const { isAuthenticated } = useAuth();
+  const { currentLang } = useLanguage();
+  const mapRef = useRef(null);
+  const [map, setMap] = useState(null);
+  const [processedData, setProcessedData] = useState(null);
+  const [loadingText, setLoadingText] = useState("Loading map...");
+
+  // Use RTK Query hook directly instead of AppDataContext
+  const {
+    data: geoJsonData,
+    isLoading: geoJsonLoading,
+    error: geoJsonError,
+    refetch: refetchGeoJson
+  } = useGetCitizenIssuesGeoJsonQuery(undefined, {
+    skip: !isAuthenticated, // Only fetch if authenticated
+  });
 
   const [selectedAssistants, setSelectedAssistants] = useState([]);
-  const { currentLang } = useLanguage();
   const [labels, setLabels] = useState(fallbackLabels.en);
 
   // Removed the useEffect that was fetching /CitizenIssues.geojson.json directly

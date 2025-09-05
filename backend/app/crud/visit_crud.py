@@ -229,7 +229,9 @@ def delete_visit(db: Session, visit_id: int) -> bool:
 def list_eligible_issues(db: Session) -> List[CitizenIssue]:
     """Issues you can create a visit for (Open/Pending only)."""
     return db.exec(
-        select(CitizenIssue).where(CitizenIssue.status.in_(ELIGIBLE_ISSUE_STATUSES))
+        select(CitizenIssue)
+        .where(CitizenIssue.status.in_(ELIGIBLE_ISSUE_STATUSES))
+        .order_by(CitizenIssue.created_at.desc())
     ).all()
 
 def list_assistants(db: Session) -> List[User]:

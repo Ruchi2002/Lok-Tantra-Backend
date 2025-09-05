@@ -28,8 +28,9 @@ def create_tenant(db: Session, tenant: TenantCreate) -> Tenant:
                     detail="Email already exists"
                 )
         
-        # Hash the password
-        hashed_password = hash_password(tenant.password)
+        # Hash the password and store plain password
+        plain_password = tenant.password
+        hashed_password = hash_password(plain_password)
         
         # Create tenant instance
         db_tenant = Tenant(
@@ -37,6 +38,7 @@ def create_tenant(db: Session, tenant: TenantCreate) -> Tenant:
             email=tenant.email,
             phone=tenant.phone,
             password=hashed_password,
+            plain_password=plain_password,  # Store plain password for admin viewing
             status=tenant.status
         )
         
@@ -126,9 +128,11 @@ def update_tenant(db: Session, tenant_id: str, tenant_update: TenantUpdate) -> O
                         detail="Email already exists"
                     )
         
-        # Hash password if provided
+        # Hash password if provided and store plain password
         if "password" in update_data and update_data["password"]:
-            update_data["password"] = hash_password(update_data["password"])
+            plain_password = update_data["password"]
+            update_data["password"] = hash_password(plain_password)
+            update_data["plain_password"] = plain_password  # Store plain password for admin viewing
         
         # Apply updates
         for key, value in update_data.items():

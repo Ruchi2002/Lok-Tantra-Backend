@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 
 from app.models.meeting_program import MeetingProgram
 from app.models.user import User
+from app.models.role import Role
 from app.schemas.meeting_program_schema import MeetingProgramCreate, MeetingProgramUpdate, MeetingProgramKPIs, MeetingProgramStats
 
 # Setup logging
@@ -78,6 +79,9 @@ def create_meeting_program(db: Session, meeting_data: MeetingProgramCreate, curr
         if meeting_data.participants:
             participants_json = json.dumps(meeting_data.participants)
         
+        # Handle user_id field - convert empty string to None
+        user_id = meeting_data.user_id if meeting_data.user_id != '' else None
+        
         # Create meeting program
         db_meeting = MeetingProgram(
             title=meeting_data.title,
@@ -95,7 +99,8 @@ def create_meeting_program(db: Session, meeting_data: MeetingProgramCreate, curr
             reminder_date=meeting_data.reminder_date,
             minutes=meeting_data.minutes,
             created_by=current_user_id,
-            tenant_id=meeting_data.tenant_id
+            tenant_id=meeting_data.tenant_id,
+            user_id=user_id
         )
         
         db.add(db_meeting)
@@ -199,6 +204,10 @@ def update_meeting_program(db: Session, meeting_id: str, meeting_data: MeetingPr
         if 'participants' in update_data:
             update_data['participants'] = json.dumps(update_data['participants']) if update_data['participants'] else None
         
+        # Handle user_id field - convert empty string to None
+        if 'user_id' in update_data and update_data['user_id'] == '':
+            update_data['user_id'] = None
+        
         # Handle minutes upload
         if 'minutes' in update_data and update_data['minutes']:
             update_data['minutes_uploaded_at'] = datetime.utcnow()
@@ -296,14 +305,50 @@ def get_upcoming_meetings_week(db: Session, tenant_id: Optional[str] = None) -> 
         logger.error(f"Error getting upcoming meetings for this week: {e}")
         return []
 
-def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> MeetingProgramKPIs:
-    """Get KPIs for meeting programs dashboard"""
+def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None, current_user: Optional[User] = None) -> MeetingProgramKPIs:
+    """Get KPIs for meeting programs dashboard with role-based filtering"""
     try:
         today = datetime.now().date()
         
-        # Base query with tenant filter
+        # Base query with role-based filtering
         base_query = select(MeetingProgram)
-        if tenant_id:
+        
+        # Apply role-based filtering
+        if current_user:
+            user_role = getattr(current_user, 'role', None)
+            role_name = user_role.name if hasattr(user_role, 'name') else str(user_role) if user_role else None
+            
+            if role_name == "SuperAdmin":
+                # Super Admin can see all meetings
+                pass
+            elif role_name == "Admin":
+                # Admin can see meetings they created and meetings assigned to Field Agents in their tenant
+                base_query = base_query.where(
+                    and_(
+                        MeetingProgram.tenant_id == current_user.tenant_id,
+                        or_(
+                            MeetingProgram.created_by == current_user.id,  # Meetings created by admin
+                            MeetingProgram.user_id.in_(  # Meetings assigned to Field Agents in their tenant
+                                select(User.id).where(
+                                    and_(
+                                        User.tenant_id == current_user.tenant_id,
+                                        User.role_id.in_(
+                                            select(Role.id).where(Role.name == "FieldAgent")
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            elif role_name == "FieldAgent":
+                # Field Agent can only see meetings assigned to them
+                base_query = base_query.where(MeetingProgram.user_id == current_user.id)
+            else:
+                # Other roles - no access
+                base_query = base_query.where(MeetingProgram.id == None)
+        elif tenant_id:
+            # Fallback to tenant-based filtering if no user context
             base_query = base_query.where(MeetingProgram.tenant_id == tenant_id)
         
         # Total meetings
@@ -359,27 +404,103 @@ def get_meeting_program_kpis(db: Session, tenant_id: Optional[str] = None) -> Me
             )
             monthly_meetings[month_key] = len(db.exec(month_query).all())
         
+        # Role-based KPIs
+        meetings_created_by_me = 0
+        meetings_assigned_to_me = 0
+        meetings_assigned_to_field_agents = 0
+        
+        if current_user:
+            # Meetings created by current user
+            created_by_me_query = select(MeetingProgram).where(MeetingProgram.created_by == current_user.id)
+            if current_user.tenant_id:
+                created_by_me_query = created_by_me_query.where(MeetingProgram.tenant_id == current_user.tenant_id)
+            meetings_created_by_me = len(db.exec(created_by_me_query).all())
+            
+            # Meetings assigned to current user
+            assigned_to_me_query = select(MeetingProgram).where(MeetingProgram.user_id == current_user.id)
+            if current_user.tenant_id:
+                assigned_to_me_query = assigned_to_me_query.where(MeetingProgram.tenant_id == current_user.tenant_id)
+            meetings_assigned_to_me = len(db.exec(assigned_to_me_query).all())
+            
+            # Meetings assigned to Field Agents in admin's tenant
+            if role_name == "Admin" and current_user.tenant_id:
+                field_agent_meetings_query = select(MeetingProgram).where(
+                    and_(
+                        MeetingProgram.tenant_id == current_user.tenant_id,
+                        MeetingProgram.user_id.in_(
+                            select(User.id).where(
+                                and_(
+                                    User.tenant_id == current_user.tenant_id,
+                                    User.role_id.in_(
+                                        select(Role.id).where(Role.name == "FieldAgent")
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                meetings_assigned_to_field_agents = len(db.exec(field_agent_meetings_query).all())
+        
         return MeetingProgramKPIs(
             total_meetings=total_meetings,
             upcoming_today=upcoming_today,
             completion_rate=completion_rate,
             average_attendance=average_attendance,
             meetings_by_type=meetings_by_type,
-            monthly_meetings=monthly_meetings
+            monthly_meetings=monthly_meetings,
+            meetings_created_by_me=meetings_created_by_me,
+            meetings_assigned_to_me=meetings_assigned_to_me,
+            meetings_assigned_to_field_agents=meetings_assigned_to_field_agents
         )
         
     except Exception as e:
         logger.error(f"Error getting meeting program KPIs: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to get meeting program KPIs")
 
-def get_meeting_program_stats(db: Session, tenant_id: Optional[str] = None) -> MeetingProgramStats:
-    """Get detailed statistics for meeting programs"""
+def get_meeting_program_stats(db: Session, tenant_id: Optional[str] = None, current_user: Optional[User] = None) -> MeetingProgramStats:
+    """Get detailed statistics for meeting programs with role-based filtering"""
     try:
         today = datetime.now().date()
         
-        # Base query with tenant filter
+        # Base query with role-based filtering
         base_query = select(MeetingProgram)
-        if tenant_id:
+        
+        # Apply role-based filtering
+        if current_user:
+            user_role = getattr(current_user, 'role', None)
+            role_name = user_role.name if hasattr(user_role, 'name') else str(user_role) if user_role else None
+            
+            if role_name == "SuperAdmin":
+                # Super Admin can see all meetings
+                pass
+            elif role_name == "Admin":
+                # Admin can see meetings they created and meetings assigned to Field Agents in their tenant
+                base_query = base_query.where(
+                    and_(
+                        MeetingProgram.tenant_id == current_user.tenant_id,
+                        or_(
+                            MeetingProgram.created_by == current_user.id,  # Meetings created by admin
+                            MeetingProgram.user_id.in_(  # Meetings assigned to Field Agents in their tenant
+                                select(User.id).where(
+                                    and_(
+                                        User.tenant_id == current_user.tenant_id,
+                                        User.role_id.in_(
+                                            select(Role.id).where(Role.name == "FieldAgent")
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            elif role_name == "FieldAgent":
+                # Field Agent can only see meetings assigned to them
+                base_query = base_query.where(MeetingProgram.user_id == current_user.id)
+            else:
+                # Other roles - no access
+                base_query = base_query.where(MeetingProgram.id == None)
+        elif tenant_id:
+            # Fallback to tenant-based filtering if no user context
             base_query = base_query.where(MeetingProgram.tenant_id == tenant_id)
         
         # Total meetings

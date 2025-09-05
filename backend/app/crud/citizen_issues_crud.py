@@ -2,6 +2,7 @@
 from sqlmodel import Session, select
 from typing import List, Optional
 import logging
+import json
 from app.models.citizen_issues import CitizenIssue
 from app.schemas.citizen_issues_schema import CitizenIssueCreate, CitizenIssueUpdate
 from app.utils.geo import generate_citizen_issue_geojson, geojson_to_string, validate_coordinates
@@ -112,8 +113,8 @@ def generate_geojson_for_issue(
         logger.error(f"Error generating GeoJSON for issue {issue.id}: {e}")
         return None
 
-def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIssue:
-    """Create a new citizen issue with comprehensive validation and error handling"""
+def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate, current_user_id: str = None) -> CitizenIssue:
+    """Create a new citizen issue with comprehensive validation, error handling, and RBAC"""
     try:
         issue_data = issue_in.model_dump()
         logger.info(f"Creating citizen issue with data: {issue_data.get('title', 'Untitled')}")
@@ -136,6 +137,13 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
         except ValidationError as e:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
+        # --- RBAC: Ensure created_by is set to current user ---
+        if current_user_id:
+            issue_data["created_by"] = current_user_id
+            logger.info(f"Setting created_by to current user: {current_user_id}")
+        elif not issue_data.get("created_by"):
+            logger.warning("No created_by user specified and no current_user_id provided")
+
         # --- Handle assigned_to (convert name to ID or handle null) ---
         assigned_to_value = issue_data.pop("assigned_to", None)
         assigned_user = None
@@ -149,6 +157,7 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
                 assigned_user = db.get(User, str(assigned_to_value))
                 if assigned_user:
                     issue_data["assigned_to"] = assigned_user.id
+                    logger.info(f"Assigned issue to user: {assigned_user.name} ({assigned_user.id})")
                 else:
                     logger.warning(f"User with ID {assigned_to_value} not found")
                     issue_data["assigned_to"] = None
@@ -157,11 +166,22 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
                 assigned_user = get_user_by_name_or_id(db, str(assigned_to_value))
                 if assigned_user:
                     issue_data["assigned_to"] = assigned_user.id
+                    logger.info(f"Assigned issue to user by name: {assigned_user.name} ({assigned_user.id})")
                 else:
                     logger.warning(f"User '{assigned_to_value}' not found, setting as unassigned")
                     issue_data["assigned_to"] = None
         else:
             issue_data["assigned_to"] = None
+            logger.info("No user assigned to this issue")
+
+        # --- Validate action_taken field ---
+        if issue_data.get("action_taken"):
+            action_taken = issue_data["action_taken"].strip()
+            if len(action_taken) > 1000:  # Reasonable limit for action taken
+                logger.warning("Action taken field is too long, truncating")
+                issue_data["action_taken"] = action_taken[:1000]
+            else:
+                issue_data["action_taken"] = action_taken
 
         # --- Handle geocoding with timeout protection ---
         if issue_data.get("location") and not (issue_data.get("latitude") and issue_data.get("longitude")):
@@ -193,21 +213,45 @@ def create_citizen_issue(db: Session, issue_in: CitizenIssueCreate) -> CitizenIs
         # --- Create the issue with GeoJSON in single transaction ---
         db_issue = CitizenIssue(**issue_data)
         
-        # Generate GeoJSON data before committing
+        # Generate compact GeoJSON data before committing
         try:
-            geojson_data = generate_geojson_for_issue(db_issue, db, assigned_user)
-            if geojson_data:
-                db_issue.geojson_data = geojson_data
-                logger.debug(f"Generated GeoJSON for issue")
+            if db_issue.latitude and db_issue.longitude:
+                # Create a compact GeoJSON for storage
+                compact_geojson = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [float(db_issue.longitude), float(db_issue.latitude)]
+                    },
+                    "properties": {
+                        "id": db_issue.id,
+                        "title": db_issue.title[:100] if db_issue.title else "",  # Truncate title
+                        "status": db_issue.status or "Open",
+                        "priority": db_issue.priority or "Medium"
+                    }
+                }
+                
+                geojson_data = json.dumps(compact_geojson, separators=(',', ':'))  # Compact JSON
+                
+                # Check if GeoJSON data is too long for the database column
+                if len(geojson_data) > 5000:  # More conservative limit
+                    logger.warning(f"GeoJSON data too long ({len(geojson_data)} chars), skipping storage")
+                    db_issue.geojson_data = None
+                else:
+                    db_issue.geojson_data = geojson_data
+                    logger.debug(f"Generated compact GeoJSON for issue ({len(geojson_data)} chars)")
+            else:
+                db_issue.geojson_data = None
+                logger.debug("No coordinates available, skipping GeoJSON generation")
         except Exception as e:
             logger.warning(f"Could not generate GeoJSON for issue: {e}")
-            # Continue without GeoJSON
+            db_issue.geojson_data = None
         
         db.add(db_issue)
         db.commit()
         db.refresh(db_issue)
         
-        logger.info(f"Created citizen issue with ID: {db_issue.id}")
+        logger.info(f"Created citizen issue with ID: {db_issue.id} by user: {current_user_id}")
         return db_issue
 
     except HTTPException:
@@ -238,7 +282,7 @@ def get_all_citizen_issues(db: Session, skip: int = 0, limit: int = 100) -> List
         if limit <= 0 or limit > 1000:  # Reasonable max limit
             limit = 100
             
-        return db.exec(select(CitizenIssue).offset(skip).limit(limit)).all()
+        return db.exec(select(CitizenIssue).order_by(CitizenIssue.created_at.desc()).offset(skip).limit(limit)).all()
     except Exception as e:
         logger.error(f"Error fetching citizen issues: {e}")
         raise HTTPException(
@@ -246,8 +290,8 @@ def get_all_citizen_issues(db: Session, skip: int = 0, limit: int = 100) -> List
             detail="Failed to fetch citizen issues"
         )
 
-def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueUpdate) -> Optional[CitizenIssue]:
-    """Update a citizen issue with comprehensive validation and error handling"""
+def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueUpdate, current_user_id: str = None) -> Optional[CitizenIssue]:
+    """Update a citizen issue with comprehensive validation, error handling, and RBAC"""
     try:
         db_issue = db.get(CitizenIssue, issue_id)
         if not db_issue:
@@ -255,12 +299,21 @@ def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueU
             return None
 
         issue_data = issue_update.model_dump(exclude_unset=True)
-        logger.info(f"Updating citizen issue {issue_id} with data: {list(issue_data.keys())}")
+        logger.info(f"Updating citizen issue {issue_id} with data: {list(issue_data.keys())} by user: {current_user_id}")
+        
+        # --- RBAC: Prevent unauthorized field modifications ---
+        # Users cannot change created_by or tenant_id
+        restricted_fields = ["created_by", "tenant_id"]
+        for field in restricted_fields:
+            if field in issue_data:
+                logger.warning(f"User {current_user_id} attempted to modify restricted field: {field}")
+                del issue_data[field]  # Remove the field from updates
         
         # --- Validate status if provided ---
         if "status" in issue_data:
             try:
                 issue_data["status"] = validate_status(issue_data["status"])
+                logger.info(f"Status updated to: {issue_data['status']}")
             except ValidationError as e:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
         
@@ -268,23 +321,55 @@ def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueU
         if "priority" in issue_data:
             try:
                 issue_data["priority"] = validate_priority(issue_data["priority"])
+                logger.info(f"Priority updated to: {issue_data['priority']}")
             except ValidationError as e:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        
+        # --- Validate action_taken field if provided ---
+        if "action_taken" in issue_data:
+            if issue_data["action_taken"]:
+                action_taken = issue_data["action_taken"].strip()
+                if len(action_taken) > 1000:  # Reasonable limit for action taken
+                    logger.warning("Action taken field is too long, truncating")
+                    issue_data["action_taken"] = action_taken[:1000]
+                else:
+                    issue_data["action_taken"] = action_taken
+                logger.info(f"Action taken updated: {len(action_taken)} characters")
+            else:
+                issue_data["action_taken"] = None
+                logger.info("Action taken cleared")
         
         # --- Handle assigned_to ---
         assigned_user = None
         if "assigned_to" in issue_data:
             if issue_data["assigned_to"]:
-                assigned_user = get_user_by_name_or_id(db, issue_data["assigned_to"])
-                if not assigned_user:
-                    raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-                        detail=f"Assigned user '{issue_data['assigned_to']}' does not exist"
-                    )
-                issue_data["assigned_to"] = assigned_user.id
+                # Check if it's already a UUID (user ID)
+                try:
+                    import uuid
+                    uuid.UUID(str(issue_data["assigned_to"]))
+                    # It's a valid UUID, treat as user ID
+                    assigned_user = db.get(User, str(issue_data["assigned_to"]))
+                    if assigned_user:
+                        issue_data["assigned_to"] = assigned_user.id
+                        logger.info(f"Assigned issue to user: {assigned_user.name} ({assigned_user.id})")
+                    else:
+                        logger.warning(f"User with ID {issue_data['assigned_to']} not found")
+                        issue_data["assigned_to"] = None
+                except ValueError:
+                    # Not a UUID, treat as name
+                    assigned_user = get_user_by_name_or_id(db, issue_data["assigned_to"])
+                    if assigned_user:
+                        issue_data["assigned_to"] = assigned_user.id
+                        logger.info(f"Assigned issue to user by name: {assigned_user.name} ({assigned_user.id})")
+                    else:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                            detail=f"Assigned user '{issue_data['assigned_to']}' does not exist"
+                        )
             else:
                 # Explicit None to unassign
                 issue_data["assigned_to"] = None
+                logger.info("Issue unassigned")
         
         # --- Get coordinates from location if location updated ---
         if "location" in issue_data and issue_data["location"]:
@@ -304,24 +389,48 @@ def update_citizen_issue(db: Session, issue_id: str, issue_update: CitizenIssueU
         
         # --- Regenerate GeoJSON if coordinates or other relevant data changed ---
         coordinate_fields = ["latitude", "longitude", "location"]
-        relevant_fields = coordinate_fields + ["title", "description", "priority", "status", "assigned_to"]
+        relevant_fields = coordinate_fields + ["title", "description", "priority", "status", "assigned_to", "action_taken"]
         
         if any(field in issue_data for field in relevant_fields):
             try:
-                geojson_data = generate_geojson_for_issue(db_issue, db, assigned_user)
-                if geojson_data:
-                    db_issue.geojson_data = geojson_data
-                    logger.debug(f"Regenerated GeoJSON for updated issue {db_issue.id}")
+                if db_issue.latitude and db_issue.longitude:
+                    # Create a compact GeoJSON for storage
+                    compact_geojson = {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [float(db_issue.longitude), float(db_issue.latitude)]
+                        },
+                        "properties": {
+                            "id": db_issue.id,
+                            "title": db_issue.title[:100] if db_issue.title else "",  # Truncate title
+                            "status": db_issue.status or "Open",
+                            "priority": db_issue.priority or "Medium"
+                        }
+                    }
+                    
+                    geojson_data = json.dumps(compact_geojson, separators=(',', ':'))  # Compact JSON
+                    
+                    # Check if GeoJSON data is too long for the database column
+                    if len(geojson_data) > 5000:  # More conservative limit
+                        logger.warning(f"GeoJSON data too long ({len(geojson_data)} chars), skipping storage for issue {db_issue.id}")
+                        db_issue.geojson_data = None
+                    else:
+                        db_issue.geojson_data = geojson_data
+                        logger.debug(f"Regenerated compact GeoJSON for updated issue {db_issue.id} ({len(geojson_data)} chars)")
+                else:
+                    db_issue.geojson_data = None
+                    logger.debug(f"No coordinates available for issue {db_issue.id}, skipping GeoJSON generation")
             except Exception as e:
                 logger.warning(f"Could not regenerate GeoJSON for updated issue {db_issue.id}: {e}")
-                # Continue without GeoJSON update
+                db_issue.geojson_data = None
         
         # --- Commit all changes in single transaction ---
         db.add(db_issue)
         db.commit()
         db.refresh(db_issue)
         
-        logger.info(f"Successfully updated citizen issue {issue_id}")
+        logger.info(f"Successfully updated citizen issue {issue_id} by user {current_user_id}")
         return db_issue
 
     except HTTPException:
@@ -473,6 +582,7 @@ def get_issues_by_status(db: Session, status_filter: str, skip: int = 0, limit: 
         issues = db.exec(
             select(CitizenIssue)
             .where(CitizenIssue.status == status_filter)
+            .order_by(CitizenIssue.created_at.desc())
             .offset(skip)
             .limit(limit)
         ).all()
@@ -508,6 +618,7 @@ def get_issues_by_priority(db: Session, priority_filter: str, skip: int = 0, lim
         issues = db.exec(
             select(CitizenIssue)
             .where(CitizenIssue.priority == priority_filter)
+            .order_by(CitizenIssue.created_at.desc())
             .offset(skip)
             .limit(limit)
         ).all()
@@ -575,4 +686,46 @@ def get_issues_statistics(db: Session) -> dict:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate statistics"
+        )
+
+def get_field_agent_issues(db: Session, user_id: str, skip: int = 0, limit: int = 100) -> List[CitizenIssue]:
+    """Get issues that a FieldAgent can access (created by or assigned to them)"""
+    try:
+        # Validate pagination parameters
+        if skip < 0:
+            skip = 0
+        if limit <= 0 or limit > 1000:
+            limit = 100
+            
+        issues = db.exec(
+            select(CitizenIssue)
+            .where(
+                (CitizenIssue.created_by == user_id) | 
+                (CitizenIssue.assigned_to == user_id)
+            )
+            .order_by(CitizenIssue.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        ).all()
+        
+        # Log detailed information about found issues
+        issue_details = []
+        for issue in issues:
+            issue_details.append({
+                'id': issue.id,
+                'title': issue.title,
+                'created_by': issue.created_by,
+                'assigned_to': issue.assigned_to,
+                'status': issue.status
+            })
+        
+        logger.info(f"Found {len(issues)} issues for FieldAgent {user_id}")
+        logger.info(f"Issue details: {issue_details}")
+        return issues
+        
+    except Exception as e:
+        logger.error(f"Error fetching FieldAgent issues for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch FieldAgent issues"
         )

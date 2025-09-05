@@ -315,6 +315,11 @@ class CookieManager:
             max_age = settings.ADMIN_TOKEN_EXPIRE_MINUTES * 60
         else:
             max_age = settings.MEMBER_TOKEN_EXPIRE_MINUTES * 60
+        
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Setting access token cookie: key={settings.ACCESS_TOKEN_COOKIE_NAME}, max_age={max_age}, httponly={settings.COOKIE_HTTPONLY}, secure={settings.COOKIE_SECURE}, samesite={settings.COOKIE_SAMESITE}, domain={settings.COOKIE_DOMAIN}, path={settings.COOKIE_PATH}")
             
         response.set_cookie(
             key=settings.ACCESS_TOKEN_COOKIE_NAME,

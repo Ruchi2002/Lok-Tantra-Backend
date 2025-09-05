@@ -43,7 +43,15 @@ class MeetingProgram(BaseModel, table=True):
     # Foreign keys
     created_by: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     tenant_id: Optional[str] = Field(default=None, foreign_key="tenant.id", index=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)  # Field agent assigned to the program
     
     # Relationships
-    creator: Optional["User"] = Relationship(back_populates="meeting_programs_created")
+    creator: Optional["User"] = Relationship(
+        back_populates="meeting_programs_created",
+        sa_relationship_kwargs={"foreign_keys": "[MeetingProgram.created_by]"}
+    )
     tenant: Optional["Tenant"] = Relationship(back_populates="meeting_programs")
+    assigned_user: Optional["User"] = Relationship(
+        back_populates="meeting_programs_assigned",
+        sa_relationship_kwargs={"foreign_keys": "[MeetingProgram.user_id]"}
+    )

@@ -21,7 +21,8 @@ import {
   useGetMeetingProgramsQuery,
   useCreateMeetingProgramMutation,
   useUpdateMeetingProgramMutation,
-  useDeleteMeetingProgramMutation
+  useDeleteMeetingProgramMutation,
+  useGetAvailableUsersQuery
 } from '../../store/api/appApi';
 import MeetingForm from '../../components/MeetingForm';
 import MeetingCard from '../../components/MeetingCard';
@@ -30,11 +31,9 @@ import MeetingCalendar from '../components/MeetingCalendar';
 import { useAuth } from '../../hooks/useAuth';
 
 const MeetingPrograms = () => {
-  const { user } = useAuth();
+  const { user, canCreateMeetings, canEditMeeting, canDeleteMeeting } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [kpis, setKpis] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
     meeting_type: '',
@@ -50,41 +49,16 @@ const MeetingPrograms = () => {
     refetch: refetchMeetings 
   } = useGetMeetingProgramsQuery();
   
+  const { data: availableUsers = [] } = useGetAvailableUsersQuery();
+  
   const [createMeeting, { isLoading: isCreating }] = useCreateMeetingProgramMutation();
   const [updateMeeting, { isLoading: isUpdating }] = useUpdateMeetingProgramMutation();
   const [deleteMeeting, { isLoading: isDeleting }] = useDeleteMeetingProgramMutation();
-
-  // Fetch additional data (these might need to be added to appApi)
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/meeting-programs/dashboard/stats', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const fetchKPIs = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/meeting-programs/dashboard/kpis', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setKpis(data);
-    } catch (error) {
-      console.error('Error fetching KPIs:', error);
-    }
-  };
 
   const handleCreateMeeting = async (meetingData) => {
     try {
       await createMeeting(meetingData).unwrap();
       setShowForm(false);
-      fetchStats();
-      fetchKPIs();
     } catch (error) {
       console.error('Error creating meeting:', error);
     }
@@ -97,8 +71,6 @@ const MeetingPrograms = () => {
         programData: meetingData 
       }).unwrap();
       setEditingMeeting(null);
-      fetchStats();
-      fetchKPIs();
     } catch (error) {
       console.error('Error updating meeting:', error);
     }
@@ -108,8 +80,6 @@ const MeetingPrograms = () => {
     if (window.confirm('Are you sure you want to delete this meeting?')) {
       try {
         await deleteMeeting(meetingId).unwrap();
-        fetchStats();
-        fetchKPIs();
       } catch (error) {
         console.error('Error deleting meeting:', error);
       }
@@ -180,17 +150,21 @@ const MeetingPrograms = () => {
                 Manage your daily schedule, planning, and event tracking
               </p>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm hover:shadow-md"
-            >
-              <Plus className="w-5 h-5" />
-              New Meeting
-            </button>
+            {canCreateMeetings && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <Plus className="w-5 h-5" />
+                New Meeting
+              </button>
+            )}
           </div>
         </div>
 
         {/* Quick Stats */}
+        {/* kpis is not defined in this component, so this block will be removed */}
+        {/*
         {kpis && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
@@ -242,6 +216,7 @@ const MeetingPrograms = () => {
             </div>
           </div>
         )}
+        */}
 
         {/* View Toggle */}
         <div className="flex items-center justify-between mb-6">
@@ -359,6 +334,8 @@ const MeetingPrograms = () => {
                 onDelete={() => handleDeleteMeeting(meeting.id)}
                 getStatusColor={getStatusColor}
                 getTypeColor={getTypeColor}
+                canEdit={canEditMeeting(meeting)}
+                canDelete={canDeleteMeeting(meeting)}
               />
             ))}
           </div>
@@ -368,8 +345,8 @@ const MeetingPrograms = () => {
           <MeetingCalendar meetings={filteredMeetings} />
         )}
 
-        {view === 'stats' && stats && (
-          <MeetingStats stats={stats} />
+        {view === 'stats' && (
+          <MeetingStats />
         )}
 
         {/* Empty State */}
@@ -385,7 +362,7 @@ const MeetingPrograms = () => {
                 : 'Get started by creating your first meeting'
               }
             </p>
-            {!filters.search && !filters.status && !filters.meeting_type && (
+            {canCreateMeetings && (
               <button
                 onClick={() => setShowForm(true)}
                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
@@ -404,6 +381,9 @@ const MeetingPrograms = () => {
           meeting={null}
           onSubmit={handleCreateMeeting}
           onClose={() => setShowForm(false)}
+          users={availableUsers}
+          currentUser={user}
+          canAssignUsers={canCreateMeetings && (user?.role === 'Admin' || user?.role === 'SuperAdmin')}
         />
       )}
 
@@ -411,7 +391,10 @@ const MeetingPrograms = () => {
         <MeetingForm
           meeting={editingMeeting}
           onSubmit={handleUpdateMeeting}
-          onClose={() => setEditingMeeting(null)}
+          onClose={() => setShowForm(false)}
+          users={availableUsers}
+          currentUser={user}
+          canAssignUsers={canEditMeeting(editingMeeting) && (user?.role === 'Admin' || user?.role === 'SuperAdmin')}
         />
       )}
     </div>

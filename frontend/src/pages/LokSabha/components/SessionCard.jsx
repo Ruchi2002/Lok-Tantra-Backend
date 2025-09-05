@@ -12,8 +12,11 @@ import {
   TrendingUp,
   Building2
 } from 'lucide-react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const SessionCard = ({ session, onEdit, onDelete }) => {
+  const { t, tSection } = useTranslation();
+  const tLokSabha = tSection('dashboard'); // Using dashboard section for Lok Sabha translations
   const [showActions, setShowActions] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -93,7 +96,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
-                  {showDetails ? 'Hide Details' : 'View Details'}
+                  {showDetails ? tLokSabha('hideDetails') : tLokSabha('viewDetails')}
                 </button>
                 <button
                   onClick={() => {
@@ -103,7 +106,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Edit className="w-4 h-4" />
-                  Edit
+                  {tLokSabha('edit')}
                 </button>
                 <button
                   onClick={() => {
@@ -113,7 +116,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
                   className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete
+                  {tLokSabha('delete')}
                 </button>
               </div>
             )}
@@ -132,11 +135,11 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center p-3 bg-blue-50 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">{session.total_questions}</div>
-            <div className="text-xs text-blue-600 font-medium">Total Questions</div>
+            <div className="text-xs text-blue-600 font-medium">{tLokSabha('totalQuestions')}</div>
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">{session.answered_questions}</div>
-            <div className="text-xs text-green-600 font-medium">Answered</div>
+            <div className="text-xs text-green-600 font-medium">{tLokSabha('answeredQuestions')}</div>
           </div>
         </div>
 
@@ -145,14 +148,14 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-500" />
-              <span className="text-gray-700">Starred Questions</span>
+              <span className="text-gray-700">{tLokSabha('starredQuestionsCount')}</span>
             </div>
             <span className="font-medium text-gray-900">{session.starred_questions}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              <span className="text-gray-700">Unstarred Questions</span>
+              <span className="text-gray-700">{tLokSabha('unstarredQuestionsCount')}</span>
             </div>
             <span className="font-medium text-gray-900">{session.unstarred_questions}</span>
           </div>
@@ -161,7 +164,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-            <span>Progress</span>
+            <span>{t('progress')}</span>
             <span>{Math.round(calculateProgress())}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -177,7 +180,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
           <div className="mb-4">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Building2 className="w-4 h-4" />
-              Top Ministries
+              {tLokSabha('topMinistries')}
             </div>
             <div className="flex flex-wrap gap-1">
               {session.top_ministries.slice(0, 3).map((ministry, index) => (
@@ -196,7 +199,7 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
       {/* Details Section */}
       {showDetails && (
         <div className="border-t border-gray-100 p-6 bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-3">Session Details</h4>
+          <h4 className="font-medium text-gray-900 mb-3">{tLokSabha('sessionDetails')}</h4>
           
           {/* Questions List */}
           {session.questions && session.questions.length > 0 ? (
@@ -221,21 +224,21 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
                     </span>
                   </div>
                   <div className="text-sm text-gray-700 mb-1">
-                    <strong>Ministry:</strong> {question.ministry}
+                    <strong>{tLokSabha('ministry')}:</strong> {question.ministry}
                   </div>
                   <div className="text-sm text-gray-700 mb-2">
-                    <strong>Subject:</strong> {question.subject}
+                    <strong>{tLokSabha('subject')}:</strong> {question.subject}
                   </div>
                   {question.answer_text && (
                     <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                      <strong>Answer:</strong> {question.answer_text.substring(0, 100)}...
+                                              <strong>{t('answer')}:</strong> {question.answer_text.substring(0, 100)}...
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No questions recorded for this session.</p>
+            <p className="text-sm text-gray-500">{t('noQuestionsRecorded')}</p>
           )}
         </div>
       )}
@@ -243,10 +246,10 @@ const SessionCard = ({ session, onEdit, onDelete }) => {
       {/* Footer */}
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
         <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>Pending: {session.pending_questions}</span>
+          <span>{tLokSabha('pendingQuestions')}: {session.pending_questions}</span>
           <div className="flex items-center gap-1">
             <TrendingUp className="w-4 h-4" />
-            <span>Performance Tracker</span>
+            <span>{t('performanceTracker')}</span>
           </div>
         </div>
       </div>

@@ -56,6 +56,19 @@ class TenantRead(BaseModel):
     class Config:
         from_attributes = True
 
+class TenantReadWithPassword(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+    plain_password: Optional[str] = None  # Plain password for super admin viewing
+    status: TenantStatusType
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class TenantLogin(BaseModel):
     email: EmailStr
     password: str

@@ -42,10 +42,10 @@ class SentLetterBase(BaseModel):
     follow_up_date: Optional[datetime] = None
     response_received_date: Optional[datetime] = None
     response_content: Optional[str] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     attachments: Optional[str] = None
     notes: Optional[str] = None
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 
     @validator('recipient_name')
     def validate_recipient_name(cls, v):
@@ -113,7 +113,7 @@ class SentLetterUpdate(BaseModel):
     follow_up_date: Optional[datetime] = None
     response_received_date: Optional[datetime] = None
     response_content: Optional[str] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     attachments: Optional[str] = None
     notes: Optional[str] = None
 
@@ -148,11 +148,11 @@ class SentLetterUpdate(BaseModel):
 # Schema for reading a letter (response model)
 class SentLetterRead(SentLetterBase):
     id: int
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -183,7 +183,7 @@ class SentLetterFilters(BaseModel):
     status: Optional[SentLetterStatus] = None
     priority: Optional[SentLetterPriority] = None
     category: Optional[SentLetterCategory] = None
-    assigned_to: Optional[int] = None
+    assigned_to: Optional[str] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     page: int = 1

@@ -11,9 +11,16 @@ const menuItems = [
     icon: <User2Icon className="w-5 h-5" />,
     path: "/superadmin/tenantPage",
   },
-  // You can add more items later like:
-  // { name: "Users", icon: <FaUsers className="w-5 h-5" />, path: "/superadmin/users" },
-  // { name: "Settings", icon: <Settings className="w-5 h-5" />, path: "/superadmin/settings" },
+  {
+    name: "Admins",
+    icon: <FaUsers className="w-5 h-5" />,
+    path: "/superadmin/adminPage",
+  },
+  {
+    name: "Dashboard",
+    icon: <Settings className="w-5 h-5" />,
+    path: "/superadmin/dashboard",
+  },
 ];
 
 const SuperAdminSidebar = () => {

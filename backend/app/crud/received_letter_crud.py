@@ -7,7 +7,7 @@ from app.schemas.received_letter_schema import ReceivedLetterCreate, ReceivedLet
 
 logger = logging.getLogger(__name__)
 
-def create_received_letter(db: Session, letter_data: ReceivedLetterCreate, user_id: int, tenant_id: Optional[int] = None) -> ReceivedLetter:
+def create_received_letter(db: Session, letter_data: ReceivedLetterCreate, user_id: str, tenant_id: Optional[str] = None) -> ReceivedLetter:
     """Create a new received letter"""
     try:
         # Convert to dict and handle tenant_id properly
@@ -34,7 +34,7 @@ def create_received_letter(db: Session, letter_data: ReceivedLetterCreate, user_
         logger.error(f"Error creating received letter: {str(e)}")
         raise
 
-def get_received_letter(db: Session, letter_id: int, tenant_id: Optional[int] = None) -> Optional[ReceivedLetter]:
+def get_received_letter(db: Session, letter_id: int, tenant_id: Optional[str] = None) -> Optional[ReceivedLetter]:
     """Get a specific received letter by ID"""
     try:
         query = select(ReceivedLetter).where(ReceivedLetter.id == letter_id)
@@ -49,7 +49,7 @@ def get_all_received_letters(
     db: Session, 
     skip: int = 0, 
     limit: int = 100, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[ReceivedLetter]:
     """Get all received letters with pagination"""
     try:
@@ -65,7 +65,7 @@ def get_all_received_letters(
 def get_filtered_received_letters(
     db: Session, 
     filters: LetterFilters, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """Get filtered received letters with pagination"""
     try:
@@ -136,8 +136,8 @@ def update_received_letter(
     db: Session, 
     letter_id: int, 
     letter_data: ReceivedLetterUpdate, 
-    user_id: int,
-    tenant_id: Optional[int] = None
+    user_id: str,
+    tenant_id: Optional[str] = None
 ) -> Optional[ReceivedLetter]:
     """Update a received letter"""
     try:
@@ -162,7 +162,7 @@ def update_received_letter(
         logger.error(f"Error updating received letter {letter_id}: {str(e)}")
         raise
 
-def delete_received_letter(db: Session, letter_id: int, tenant_id: Optional[int] = None) -> bool:
+def delete_received_letter(db: Session, letter_id: int, tenant_id: Optional[str] = None) -> bool:
     """Delete a received letter"""
     try:
         db_letter = get_received_letter(db, letter_id, tenant_id)
@@ -178,11 +178,47 @@ def delete_received_letter(db: Session, letter_id: int, tenant_id: Optional[int]
         logger.error(f"Error deleting received letter {letter_id}: {str(e)}")
         raise
 
-def get_letter_statistics(db: Session, tenant_id: Optional[int] = None) -> LetterStatistics:
-    """Get statistics for received letters"""
+def get_letter_statistics(db: Session, tenant_id: Optional[str] = None, user_id: Optional[str] = None, user_role: Optional[str] = None) -> LetterStatistics:
+    """Get statistics for received letters with role-based filtering"""
     try:
         base_query = select(ReceivedLetter)
-        if tenant_id:
+        
+        # Apply role-based filtering
+        if user_role == "super_admin":
+            # Super admin sees all letters
+            pass
+        elif user_role == "admin" and tenant_id:
+            # Admin sees letters they created + letters assigned to their Field Agents
+            from app.models.user import User
+            from app.models.role import Role
+            
+            # Get Field Agent IDs in the same tenant
+            field_agent_ids = db.exec(
+                select(User.id).where(
+                    and_(
+                        User.tenant_id == tenant_id,
+                        User.role_id.in_(
+                            select(Role.id).where(Role.name == "FieldAgent")
+                        )
+                    )
+                )
+            ).all()
+            
+            # Filter for letters created by admin OR assigned to their Field Agents
+            base_query = base_query.where(
+                or_(
+                    ReceivedLetter.created_by == user_id,
+                    ReceivedLetter.assigned_to.in_([str(fa_id) for fa_id in field_agent_ids])
+                )
+            )
+        elif user_role in ["field_agent", "assistant"] and user_id:
+            # Field agents see only their assigned letters
+            base_query = base_query.where(ReceivedLetter.assigned_to == user_id)
+        elif user_role == "regular_user" and user_id:
+            # Regular users see only their created letters
+            base_query = base_query.where(ReceivedLetter.created_by == user_id)
+        elif tenant_id:
+            # Fallback to tenant filtering if provided
             base_query = base_query.where(ReceivedLetter.tenant_id == tenant_id)
         
         # Total letters
@@ -259,7 +295,7 @@ def get_letter_statistics(db: Session, tenant_id: Optional[int] = None) -> Lette
         logger.error(f"Error fetching letter statistics: {str(e)}")
         raise
 
-def get_letters_by_status(db: Session, status: LetterStatus, tenant_id: Optional[int] = None) -> List[ReceivedLetter]:
+def get_letters_by_status(db: Session, status: LetterStatus, tenant_id: Optional[str] = None) -> List[ReceivedLetter]:
     """Get letters by status"""
     try:
         query = select(ReceivedLetter).where(ReceivedLetter.status == status)
@@ -271,7 +307,7 @@ def get_letters_by_status(db: Session, status: LetterStatus, tenant_id: Optional
         logger.error(f"Error fetching letters by status {status}: {str(e)}")
         raise
 
-def get_letters_by_priority(db: Session, priority: LetterPriority, tenant_id: Optional[int] = None) -> List[ReceivedLetter]:
+def get_letters_by_priority(db: Session, priority: LetterPriority, tenant_id: Optional[str] = None) -> List[ReceivedLetter]:
     """Get letters by priority"""
     try:
         query = select(ReceivedLetter).where(ReceivedLetter.priority == priority)
@@ -283,7 +319,7 @@ def get_letters_by_priority(db: Session, priority: LetterPriority, tenant_id: Op
         logger.error(f"Error fetching letters by priority {priority}: {str(e)}")
         raise
 
-def get_overdue_letters(db: Session, tenant_id: Optional[int] = None) -> List[ReceivedLetter]:
+def get_overdue_letters(db: Session, tenant_id: Optional[str] = None) -> List[ReceivedLetter]:
     """Get overdue letters"""
     try:
         query = select(ReceivedLetter).where(
@@ -300,7 +336,7 @@ def get_overdue_letters(db: Session, tenant_id: Optional[int] = None) -> List[Re
         logger.error(f"Error fetching overdue letters: {str(e)}")
         raise
 
-def assign_letter_to_user(db: Session, letter_id: int, user_id: int, assigned_user_id: int, tenant_id: Optional[int] = None) -> Optional[ReceivedLetter]:
+def assign_letter_to_user(db: Session, letter_id: int, user_id: str, assigned_user_id: str, tenant_id: Optional[str] = None) -> Optional[ReceivedLetter]:
     """Assign a letter to a specific user"""
     try:
         db_letter = get_received_letter(db, letter_id, tenant_id)
@@ -321,7 +357,7 @@ def assign_letter_to_user(db: Session, letter_id: int, user_id: int, assigned_us
         logger.error(f"Error assigning letter {letter_id} to user {assigned_user_id}: {str(e)}")
         raise
 
-def update_letter_status(db: Session, letter_id: int, status: LetterStatus, user_id: int, tenant_id: Optional[int] = None) -> Optional[ReceivedLetter]:
+def update_letter_status(db: Session, letter_id: int, status: LetterStatus, user_id: str, tenant_id: Optional[str] = None) -> Optional[ReceivedLetter]:
     """Update letter status"""
     try:
         db_letter = get_received_letter(db, letter_id, tenant_id)

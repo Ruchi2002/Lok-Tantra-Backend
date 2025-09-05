@@ -17,6 +17,7 @@ from app.schemas.auth_schema import (
 )
 from app.services.auth_service import auth_service
 from app.core.auth import get_current_user
+from typing import Union
 from app.core.security import audit_logger, security_middleware, cookie_manager
 from config import settings
 
@@ -106,6 +107,44 @@ async def logout(
             detail="Internal server error"
         )
 
+@router.post("/logout-force", response_model=AuthResponse)
+async def logout_force(
+    request: Request,
+    response: Response
+):
+    """
+    Force logout endpoint - clears cookies without requiring authentication
+    Used when user session has already expired
+    """
+    try:
+        client_ip = request.client.host
+        user_agent = request.headers.get("user-agent", "")
+        
+        # Log force logout event
+        audit_logger.log_auth_event(
+            "FORCE_LOGOUT",
+            user_id="unknown",
+            email="unknown",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            success=True
+        )
+        
+        # Clear authentication cookies
+        cookie_manager.clear_auth_cookies(response)
+        
+        return AuthResponse(
+            success=True,
+            message="Successfully logged out (force logout)"
+        )
+        
+    except Exception as e:
+        logger.error(f"Force logout error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
 @router.get("/me")
 async def get_current_user_info(
     current_user = Depends(get_current_user),
@@ -116,6 +155,19 @@ async def get_current_user_info(
     Get current user information
     """
     try:
+        # Determine user type based on the object type
+        from app.models.user import User
+        from app.models.tenant import Tenant
+        from app.models.superadmin import SuperAdmin
+        
+        user_type = "user"  # Default
+        if isinstance(current_user, SuperAdmin):
+            user_type = "superadmin"
+        elif isinstance(current_user, Tenant):
+            user_type = "tenant"
+        elif isinstance(current_user, User):
+            user_type = "user"
+        
         # Get role name safely
         role_name = None
         if hasattr(current_user, 'role') and current_user.role:
@@ -125,6 +177,10 @@ async def get_current_user_info(
                 role_name = str(current_user.role)
         elif hasattr(current_user, 'role_name'):
             role_name = current_user.role_name
+        elif user_type == "superadmin":
+            role_name = "Super_admins"  # Default role for superadmin
+        elif user_type == "tenant":
+            role_name = "Tenant_admin"  # Default role for tenant
         
         # Get user permissions from database using role_id
         permissions = []
@@ -143,7 +199,7 @@ async def get_current_user_info(
             "role": role_name,
             "tenant_id": getattr(current_user, 'tenant_id', None),
             "status": getattr(current_user, 'status', 'active'),
-            "user_type": getattr(current_user, 'user_type', 'user'),
+            "user_type": user_type,
             "permissions": permissions
         }
         

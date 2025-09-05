@@ -1,15 +1,11 @@
-import React, { useEffect, useState } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  CircleMarker,
-  Tooltip,
-} from "react-leaflet";
+import React, { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import dayjs from "dayjs";
+import { useGetCitizenIssuesGeoJsonQuery } from "../../store/api/appApi";
+import { useAuth } from "../../hooks/useAuth";
 import { useLanguage } from "../../context/LanguageContext";
 import { translateText } from "../../utils/translateText";
-import { useAppData } from '../../context/AppDataContext'; // Import the new hook
 
 const fallbackLabels = {
   en: {
@@ -45,11 +41,32 @@ const fallbackLabels = {
 };
 
 // HeatmapMap now receives filter as a prop, and will consume geo data from context
-const HeatmapMap = ({ filter }) => {
-  // Consume geoJsonData, loading, and error from context
-  const { geoJsonData, geoJsonLoading, geoJsonError } = useAppData(); 
-  
+const HeatmapMap = ({ 
+  filter, 
+  onAreaClick, 
+  selectedArea, 
+  onMarkerClick,
+  showHeatmap = true,
+  showMarkers = true,
+  customData = null 
+}) => {
+  const { isAuthenticated } = useAuth();
   const { currentLang } = useLanguage();
+  const mapRef = useRef(null);
+  const [map, setMap] = useState(null);
+  const [processedData, setProcessedData] = useState(null);
+  const [loadingText, setLoadingText] = useState("Loading map...");
+
+  // Use RTK Query hook directly instead of AppDataContext
+  const {
+    data: geoJsonData,
+    isLoading: geoJsonLoading,
+    error: geoJsonError,
+    refetch: refetchGeoJson
+  } = useGetCitizenIssuesGeoJsonQuery(undefined, {
+    skip: !isAuthenticated, // Only fetch if authenticated
+  });
+
   const [labels, setLabels] = useState(fallbackLabels.en);
 
   // Translation logic for labels
@@ -176,7 +193,7 @@ const HeatmapMap = ({ filter }) => {
                 fillOpacity: 0.8,
               }}
             >
-              <Tooltip direction="top" offset={[0, -10]} sticky>
+              <Popup>
                 <div className="text-sm">
                   <strong>{location}</strong>
                   <br />
@@ -186,7 +203,7 @@ const HeatmapMap = ({ filter }) => {
                   <br />
                   <span className="text-green-600">{labels.status}:</span> {status}
                 </div>
-              </Tooltip>
+              </Popup>
             </CircleMarker>
           );
         })}

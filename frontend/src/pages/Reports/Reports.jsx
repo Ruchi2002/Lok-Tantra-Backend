@@ -8,7 +8,9 @@ import ExportButtons from "./components/ExportButtons";
 import ShareButtons from "./components/ShareButtons";
 import { useLanguage } from "../../context/LanguageContext";
 import { translateText } from "../../utils/translateText";
-import { useAppData } from '../../context/AppdataContext';
+import { useGetCitizenIssuesGeoJsonQuery } from "../../store/api/appApi";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const ORIGINAL_LABELS = {
   heading: "Reports Dashboard",
@@ -47,8 +49,21 @@ const monthMap = {
 };
 
 const Reports = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { currentLang } = useLanguage();
-  const { geoJsonData, geoJsonLoading, geoJsonError } = useAppData();
+  const [selectedArea, setSelectedArea] = useState(null);
+  const [areaStats, setAreaStats] = useState(null);
+
+  // Use RTK Query hook directly instead of AppDataContext
+  const {
+    data: geoJsonData,
+    isLoading: geoJsonLoading,
+    error: geoJsonError,
+    refetch: refetchGeoJson
+  } = useGetCitizenIssuesGeoJsonQuery(undefined, {
+    skip: !isAuthenticated, // Only fetch if authenticated
+  });
   
   const [reportType, setReportType] = useState("Daily");
   const [translatedLabels, setTranslatedLabels] = useState(ORIGINAL_LABELS);

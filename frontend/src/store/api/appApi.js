@@ -5,12 +5,19 @@ export const appApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: 'http://localhost:8000',
     credentials: 'include',
-    prepareHeaders: (headers) => {
+    prepareHeaders: (headers, { getState }) => {
       headers.set('Content-Type', 'application/json')
+      
+      // Add authorization header if token exists
+      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`)
+      }
+      
       return headers
     },
   }),
-  tagTypes: ['SentLetters', 'ReceivedLetters', 'SentGrievanceLetters', 'CitizenIssues', 'Visits', 'Tenants'],
+  tagTypes: ['SentLetters', 'ReceivedLetters', 'SentGrievanceLetters', 'CitizenIssues', 'Visits', 'Tenants', 'Dashboard', 'MeetingPrograms'],
   endpoints: (builder) => ({
     // ===== SENT LETTERS =====
     getSentLetters: builder.query({
@@ -63,20 +70,20 @@ export const appApi = createApi({
     // ===== RECEIVED LETTERS =====
     getReceivedLetters: builder.query({
       query: (params = {}) => ({
-        url: '/received-letters',
+        url: '/letters/received',
         params,
       }),
       providesTags: ['ReceivedLetters'],
     }),
 
     getReceivedLetterById: builder.query({
-      query: (letterId) => `/received-letters/${letterId}`,
+      query: (letterId) => `/letters/received/${letterId}`,
       providesTags: (result, error, letterId) => [{ type: 'ReceivedLetters', id: letterId }],
     }),
 
     createReceivedLetter: builder.mutation({
       query: (letterData) => ({
-        url: '/received-letters',
+        url: '/letters/received',
         method: 'POST',
         body: letterData,
       }),
@@ -85,7 +92,7 @@ export const appApi = createApi({
 
     updateReceivedLetter: builder.mutation({
       query: ({ letterId, letterData }) => ({
-        url: `/received-letters/${letterId}`,
+        url: `/letters/received/${letterId}`,
         method: 'PUT',
         body: letterData,
       }),
@@ -97,14 +104,14 @@ export const appApi = createApi({
 
     deleteReceivedLetter: builder.mutation({
       query: (letterId) => ({
-        url: `/received-letters/${letterId}`,
+        url: `/letters/received/${letterId}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['ReceivedLetters'],
     }),
 
     getReceivedLettersStatistics: builder.query({
-      query: () => '/received-letters/statistics/overview',
+      query: () => '/letters/received/statistics/overview',
       providesTags: ['ReceivedLetters'],
     }),
 
@@ -115,6 +122,11 @@ export const appApi = createApi({
         params,
       }),
       providesTags: ['SentGrievanceLetters'],
+    }),
+
+    getAccessibleCitizenIssues: builder.query({
+      query: () => '/sent-grievance-letters/accessible-citizen-issues',
+      providesTags: ['AccessibleCitizenIssues'],
     }),
 
     getSentGrievanceLetterById: builder.query({
@@ -183,7 +195,7 @@ export const appApi = createApi({
         method: 'POST',
         body: issueData,
       }),
-      invalidatesTags: ['CitizenIssues'],
+      invalidatesTags: ['CitizenIssues', 'Dashboard', 'Visits'],
     }),
 
     updateCitizenIssue: builder.mutation({
@@ -194,6 +206,8 @@ export const appApi = createApi({
       }),
       invalidatesTags: (result, error, { issueId }) => [
         'CitizenIssues',
+        'Dashboard',
+        'Visits',
         { type: 'CitizenIssues', id: issueId },
       ],
     }),
@@ -203,11 +217,49 @@ export const appApi = createApi({
         url: `/citizen-issues/${issueId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['CitizenIssues'],
+      invalidatesTags: ['CitizenIssues', 'Dashboard', 'Visits'],
     }),
 
     getCitizenIssuesGeoJson: builder.query({
       query: () => '/citizen-issues/geojson/all',
+      providesTags: ['CitizenIssues'],
+    }),
+
+    // Get issue categories for filtering
+    getIssueCategories: builder.query({
+      query: () => '/citizen-issues/categories',
+      providesTags: ['CitizenIssues'],
+    }),
+
+    // Get areas for filtering
+    getAreas: builder.query({
+      query: () => '/citizen-issues/areas',
+      providesTags: ['CitizenIssues'],
+    }),
+
+    // Get available users for assignment
+    getAvailableUsers: builder.query({
+      query: () => '/citizen-issues/users',
+      providesTags: ['CitizenIssues'],
+    }),
+
+    // Removed getMeetingParticipants as we're using manual participant entry
+
+    // Get filtered citizen issues with advanced filtering
+    getFilteredCitizenIssues: builder.query({
+      query: (params) => ({
+        url: '/citizen-issues/filtered',
+        params,
+      }),
+      providesTags: ['CitizenIssues'],
+    }),
+
+    // Get FieldAgent issues (only issues they created or are assigned to)
+    getFieldAgentIssues: builder.query({
+      query: (params = {}) => ({
+        url: '/citizen-issues/field-agent',
+        params,
+      }),
       providesTags: ['CitizenIssues'],
     }),
 
@@ -375,6 +427,21 @@ export const appApi = createApi({
       }),
       invalidatesTags: ['MeetingPrograms'],
     }),
+
+    getTodayMeetings: builder.query({
+      query: () => '/meeting-programs/upcoming/today',
+      providesTags: ['MeetingPrograms'],
+    }),
+
+    getMeetingKPIs: builder.query({
+      query: () => '/meeting-programs/dashboard/kpis',
+      providesTags: ['MeetingPrograms'],
+    }),
+
+    getMeetingStats: builder.query({
+      query: () => '/meeting-programs/dashboard/stats',
+      providesTags: ['MeetingPrograms'],
+    }),
   }),
 })
 
@@ -397,6 +464,7 @@ export const {
   
   // Sent Grievance Letters
   useGetSentGrievanceLettersQuery,
+  useGetAccessibleCitizenIssuesQuery,
   useGetSentGrievanceLetterByIdQuery,
   useCreateSentGrievanceLetterMutation,
   useUpdateSentGrievanceLetterMutation,
@@ -410,6 +478,11 @@ export const {
   useUpdateCitizenIssueMutation,
   useDeleteCitizenIssueMutation,
   useGetCitizenIssuesGeoJsonQuery,
+  useGetIssueCategoriesQuery,
+  useGetAreasQuery,
+  useGetAvailableUsersQuery,
+  useGetFilteredCitizenIssuesQuery,
+  useGetFieldAgentIssuesQuery,
   
   // Visits
   useGetVisitsQuery,
@@ -436,6 +509,9 @@ export const {
   
   // Meeting Programs
   useGetMeetingProgramsQuery,
+  useGetTodayMeetingsQuery,
+  useGetMeetingKPIsQuery,
+  useGetMeetingStatsQuery,
   useCreateMeetingProgramMutation,
   useUpdateMeetingProgramMutation,
   useDeleteMeetingProgramMutation,

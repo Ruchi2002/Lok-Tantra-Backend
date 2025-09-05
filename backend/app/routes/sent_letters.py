@@ -5,6 +5,7 @@ from datetime import datetime
 import logging
 
 from database import get_session
+from app.core.auth import get_current_user
 from app.models.sent_letter import SentLetterStatus, SentLetterPriority, SentLetterCategory
 from app.schemas.sent_letter_schema import (
     SentLetterCreate, SentLetterRead, SentLetterUpdate, 
@@ -17,9 +18,37 @@ from app.crud.sent_letter_crud import (
     get_overdue_followups, get_followups_due_this_week, assign_sent_letter_to_user, 
     update_sent_letter_status, record_response_received
 )
+from app.models.user import User
+from app.utils.role_permissions import RolePermissions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sent-letters", tags=["Sent Letters - Public Interest"])
+
+# Initialize role permissions
+role_permissions = RolePermissions()
+
+def get_user_role_name(user: User) -> str:
+    """Get normalized role name from user"""
+    if not user or not hasattr(user, 'role'):
+        return "regular_user"
+    
+    if hasattr(user.role, 'name'):
+        role_name = user.role.name
+    else:
+        role_name = str(user.role)
+    
+    # Normalize role names
+    role_lower = role_name.lower().strip()
+    if any(keyword in role_lower for keyword in ['super_admin', 'superadmin', 'super_admins']):
+        return "super_admin"
+    elif any(keyword in role_lower for keyword in ['admin', 'tenant_admin']):
+        return "admin"
+    elif any(keyword in role_lower for keyword in ['field_agent', 'fieldagent', 'field agent']):
+        return "field_agent"
+    elif any(keyword in role_lower for keyword in ['assistant', 'assistants']):
+        return "assistant"
+    else:
+        return "regular_user"
 
 # Test endpoint that doesn't require authentication
 @router.get("/test", response_model=dict)
@@ -34,12 +63,14 @@ def test_endpoint():
 @router.post("/", response_model=SentLetterRead, status_code=status.HTTP_201_CREATED)
 def create_letter(
     letter_data: SentLetterCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
     """Create a new sent letter for public interest"""
     try:
-        # Use a default user ID of 1 for created_by and updated_by
-        letter = create_sent_letter(db, letter_data, 1, None)
+        # Set tenant_id from current user
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        letter = create_sent_letter(db, letter_data, str(current_user.id), tenant_id)
         return letter
     except Exception as e:
         logger.error(f"Error creating sent letter: {str(e)}")
@@ -59,10 +90,14 @@ def get_letters(
     date_to: Optional[datetime] = Query(None, description="Filter by sent date to"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
-    """Get filtered sent letters with pagination"""
+    """Get filtered sent letters with pagination and role-based access control"""
     try:
+        # Get tenant_id from current user for role-based filtering
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        
         filters = SentLetterFilters(
             search=search,
             status=status,
@@ -75,7 +110,10 @@ def get_letters(
             per_page=per_page
         )
         
-        result = get_filtered_sent_letters(db, filters, None)
+        # Get user role for filtering
+        user_role = get_user_role_name(current_user)
+        
+        result = get_filtered_sent_letters(db, filters, tenant_id, str(current_user.id), user_role)
         return SentLetterList(**result)
     except Exception as e:
         logger.error(f"Error fetching sent letters: {str(e)}")
@@ -104,11 +142,16 @@ def get_all_letters(
 # Specific endpoints that must come before /{letter_id} routes
 @router.get("/statistics", response_model=SentLetterStatistics)
 def get_statistics(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
-    """Get sent letter statistics for dashboard KPIs"""
+    """Get sent letter statistics for dashboard KPIs with role-based filtering"""
     try:
-        stats = get_sent_letter_statistics(db, None)
+        # Get user role and tenant_id for filtering
+        user_role = get_user_role_name(current_user)
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        
+        stats = get_sent_letter_statistics(db, tenant_id, str(current_user.id), user_role)
         return stats
     except Exception as e:
         logger.error(f"Error fetching sent letter statistics: {str(e)}")
@@ -258,16 +301,53 @@ def get_statuses_list():
 @router.get("/{letter_id}", response_model=SentLetterRead)
 def get_letter(
     letter_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
-    """Get a specific sent letter by ID"""
+    """Get a specific sent letter by ID with role-based access control"""
     try:
-        letter = get_sent_letter(db, letter_id, None)
+        # Get tenant_id from current user
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        letter = get_sent_letter(db, letter_id, tenant_id)
+        
         if not letter:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sent letter not found"
             )
+        
+        # Apply role-based access control
+        user_role = get_user_role_name(current_user)
+        
+        # Super Admin can see all letters
+        if user_role == "super_admin":
+            return letter
+        
+        # Admin can see letters from their tenant
+        if user_role == "admin":
+            if letter.tenant_id != tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only access letters from your organization"
+                )
+            return letter
+        
+        # Field Agent can only see letters assigned to them or created by them
+        if user_role in ["field_agent", "assistant"]:
+            if letter.assigned_to != str(current_user.id) and letter.created_by != str(current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only access letters assigned to you or created by you"
+                )
+            return letter
+        
+        # Regular users can only see letters they created
+        if letter.created_by != str(current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only access letters you created"
+            )
+        
         return letter
     except HTTPException:
         raise
@@ -282,16 +362,55 @@ def get_letter(
 def update_letter(
     letter_id: int,
     letter_data: SentLetterUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
-    """Update a sent letter"""
+    """Update a sent letter with role-based access control"""
     try:
-        letter = update_sent_letter(db, letter_id, letter_data, 1, None)
+        # Get tenant_id from current user
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        
+        # First check if letter exists and user has access
+        letter = get_sent_letter(db, letter_id, tenant_id)
         if not letter:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sent letter not found"
             )
+        
+        # Apply role-based access control
+        user_role = get_user_role_name(current_user)
+        
+        # Super Admin can update all letters
+        if user_role == "super_admin":
+            pass  # Allow update
+        
+        # Admin can update letters from their tenant
+        elif user_role == "admin":
+            if letter.tenant_id != tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only update letters from your organization"
+                )
+        
+        # Field Agent can only update letters assigned to them or created by them
+        elif user_role in ["field_agent", "assistant"]:
+            if letter.assigned_to != str(current_user.id) and letter.created_by != str(current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only update letters assigned to you or created by you"
+                )
+        
+        # Regular users can only update letters they created
+        else:
+            if letter.created_by != str(current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only update letters you created"
+                )
+        
+        # Perform the update
+        letter = update_sent_letter(db, letter_id, letter_data, str(current_user.id), tenant_id)
         return letter
     except HTTPException:
         raise
@@ -305,11 +424,54 @@ def update_letter(
 @router.delete("/{letter_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_letter(
     letter_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session)
 ):
-    """Delete a sent letter"""
+    """Delete a sent letter with role-based access control"""
     try:
-        success = delete_sent_letter(db, letter_id, None)
+        # Get tenant_id from current user
+        tenant_id = current_user.tenant_id if hasattr(current_user, 'tenant_id') else None
+        
+        # First check if letter exists and user has access
+        letter = get_sent_letter(db, letter_id, tenant_id)
+        if not letter:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sent letter not found"
+            )
+        
+        # Apply role-based access control
+        user_role = get_user_role_name(current_user)
+        
+        # Super Admin can delete all letters
+        if user_role == "super_admin":
+            pass  # Allow delete
+        
+        # Admin can delete letters from their tenant
+        elif user_role == "admin":
+            if letter.tenant_id != tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only delete letters from your organization"
+                )
+        
+        # Field Agents and Assistants CANNOT delete letters (CRU only)
+        elif user_role in ["field_agent", "assistant"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Field Agents and Assistants cannot delete letters"
+            )
+        
+        # Regular users can only delete letters they created
+        else:
+            if letter.created_by != str(current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: You can only delete letters you created"
+                )
+        
+        # Perform the delete
+        success = delete_sent_letter(db, letter_id, tenant_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -332,8 +494,8 @@ def assign_letter(
 ):
     """Assign a sent letter to a specific user"""
     try:
-        # Use a default user ID of 1 for the user performing the assignment
-        letter = assign_sent_letter_to_user(db, letter_id, 1, assigned_user_id, None)
+        # Use a default user ID for the user performing the assignment
+        letter = assign_sent_letter_to_user(db, letter_id, "1", str(assigned_user_id), None)
         if not letter:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -357,8 +519,8 @@ def update_status(
 ):
     """Update sent letter status"""
     try:
-        # Use a default user ID of 1 for the user updating the status
-        letter = update_sent_letter_status(db, letter_id, status, 1, None)
+        # Use a default user ID for the user updating the status
+        letter = update_sent_letter_status(db, letter_id, status, "1", None)
         if not letter:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -382,8 +544,8 @@ def record_response(
 ):
     """Record that a response was received for a sent letter"""
     try:
-        # Use a default user ID of 1 for the user recording the response
-        letter = record_response_received(db, letter_id, response_content, 1, None)
+        # Use a default user ID for the user recording the response
+        letter = record_response_received(db, letter_id, response_content, "1", None)
         if not letter:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -415,7 +577,7 @@ def update_letter_status(
                 detail="Status is required"
             )
         
-        success = update_sent_letter_status(db, letter_id, new_status, None)
+        success = update_sent_letter_status(db, letter_id, new_status, "1", None)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -449,7 +611,7 @@ def record_response_main(
                 detail="Response content is required"
             )
         
-        success = record_response_received(db, letter_id, response_content, None)
+        success = record_response_received(db, letter_id, response_content, "1", None)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -483,7 +645,7 @@ def assign_letter_to_user(
                 detail="User ID is required"
             )
         
-        success = assign_sent_letter_to_user(db, letter_id, user_id, None)
+        success = assign_sent_letter_to_user(db, letter_id, "1", str(user_id), None)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

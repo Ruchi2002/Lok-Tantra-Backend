@@ -1,10 +1,28 @@
 import { Pencil, X, Save, Trash2 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLanguage } from "../../context/LanguageContext";
-import { useDeleteCitizenIssueMutation } from "../../store/api/appApi";
+import { useDeleteCitizenIssueMutation, useUpdateCitizenIssueMutation } from "../../store/api/appApi";
 import { fallbackTranslations } from "../../utils/fallbackTranslation";
 import useSpeechToText from "../../hooks/useSpeechToText";
 import { FaMicrophone, FaMicrophoneSlash, FaFile } from "react-icons/fa";
+import { useAuth } from "../../hooks/useAuth";
+
+// Transform function for issue data
+const transformIssueData = {
+  toAPI: (formData) => {
+    return {
+      title: formData.title,
+      description: formData.description,
+      status: formData.status,
+      priority: formData.priority,
+      location: formData.location,
+      assigned_to: formData.assigned_to,
+      category_id: formData.category_id,
+      area_id: formData.area_id,
+      action_taken: formData.action_taken || null, // Ensure null instead of empty string
+    };
+  }
+};
 
 // 🎨 Color Mappings for status and priority badges
 const statusColors = {
@@ -26,7 +44,7 @@ const statusOptions = ["Open", "In Progress", "Pending", "Resolved"];
 const priorityOptions = ["Low", "Medium", "High", "Urgent"];
 
 // ✨ Edit Modal Component
-const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
+const EditModal = ({ issue, isOpen, onClose, onSave, onDelete, canEdit, canDelete }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -46,6 +64,10 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
   const titleSTT = useSpeechToText(selectedLang);
   const descriptionSTT = useSpeechToText(selectedLang);
   const actionTakenSTT = useSpeechToText(selectedLang);
+
+  // RTK Query hooks for mutations
+  const [updateIssue] = useUpdateCitizenIssueMutation();
+  const [deleteIssue] = useDeleteCitizenIssueMutation();
 
   // Populate form data when the issue prop changes
   useEffect(() => {
@@ -106,30 +128,47 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
       const apiData = transformIssueData.toAPI(formData);
       
       // Update the issue via API
-      const updatedIssue = await citizenIssuesAPI.update(issue.id, apiData);
+      // Update the issue using the RTK Query mutation
+      const updatedIssue = await updateIssue({ 
+        issueId: issue.id, 
+        issueData: apiData 
+      }).unwrap();
       
       // Call the onSave callback with the updated issue
       onSave(updatedIssue);
       onClose();
     } catch (error) {
       console.error('Error updating issue:', error);
-      alert('Failed to update issue: ' + (error.message || 'Unknown error'));
+      let errorMessage = 'Failed to update issue';
+      
+      if (error.data?.detail) {
+        errorMessage = error.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     }
-  }, [issue, formData, onSave, onClose]);
+  }, [issue, formData, onSave, onClose, updateIssue]);
 
-  // Handle delete
-  const handleDelete = useCallback(async () => {
-    if (window.confirm('Are you sure you want to delete this issue?')) {
+  // Handle delete with permission check
+  const handleDelete = async () => {
+    if (!canDelete) {
+      alert("You don't have permission to delete this issue");
+      return;
+    }
+    
+    if (window.confirm("Are you sure you want to delete this issue?")) {
       try {
-        await citizenIssuesAPI.delete(issue.id);
+        await deleteIssue(issue.id);
         onDelete(issue.id);
         onClose();
       } catch (error) {
-        console.error('Error deleting issue:', error);
-        alert('Failed to delete issue: ' + (error.message || 'Unknown error'));
+        console.error("Delete error:", error);
+        alert("Failed to delete issue");
       }
     }
-  }, [issue, onDelete, onClose]);
+  };
 
   // Render nothing if modal is not open
   if (!isOpen) return null;
@@ -171,7 +210,7 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
         <div className="p-4 space-y-4 sm:p-6 sm:space-y-5 max-h-[calc(100vh-180px)] overflow-y-auto">
           {/* Issue Title Field */}
           <div className="relative">
-            <label htmlFor="issue-title" className="block text-sm font-medium text-teal-700 mb-1">Issue Title</label>
+            <label htmlFor="issue-title" className="block text-sm font-medium text-teal-700 mb-1">Grievance Title</label>
             <input
               id="issue-title"
               type="text"
@@ -196,7 +235,7 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
 
           {/* Issue Description Field */}
           <div className="relative">
-            <label htmlFor="issue-description" className="block text-sm font-medium text-teal-700 mb-1">Issue Description</label>
+            <label htmlFor="issue-description" className="block text-sm font-medium text-teal-700 mb-1">Grievance Description</label>
             <textarea
               id="issue-description"
               value={formData.description}
@@ -305,27 +344,31 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
         </div>
 
         {/* Modal Footer - Buttons */}
-        <div className="flex justify-between px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-t border-gray-200">
+        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
           <button
-            onClick={handleDelete}
-            className="px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200 font-medium text-sm sm:text-base flex items-center gap-2"
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
-            <Trash2 size={16} /> Delete Issue
+            Cancel
           </button>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 font-medium text-sm sm:text-base"
-            >
-              Cancel
-            </button>
+          
+          {canEdit && (
             <button
               onClick={handleSubmit}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg flex items-center gap-2 transition-colors duration-200 font-medium text-sm sm:text-base"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              <Save size={16} /> Save Changes
+              Save Changes
             </button>
-          </div>
+          )}
+          
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              Delete Issue
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -333,14 +376,45 @@ const EditModal = ({ issue, isOpen, onClose, onSave, onDelete }) => {
 };
 
 // 📋 IssueTable Component
-const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
+const IssueTable = ({ 
+  issues = [], 
+  onIssueUpdated, 
+  onIssueDeleted,
+  showActions = true 
+}) => {
   const [editingIssue, setEditingIssue] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { currentLang } = useLanguage();
+  const { user, hasRole, isSuperAdmin, isTenantAdmin } = useAuth();
+
+  // Basic permission checking functions - Updated to allow everyone to edit and delete
+  const canEditIssue = useCallback((issue) => {
+    if (!user) return false;
+    
+    // Everyone can edit any issue (as long as they are authenticated)
+    return true;
+  }, [user]);
+
+  const canDeleteIssue = useCallback((issue) => {
+    if (!user) return false;
+    
+    // Everyone can delete any issue (as long as they are authenticated)
+    return true;
+  }, [user]);
+
+  const canCreateIssue = useCallback(() => {
+    if (!user) return false;
+    
+    // All authenticated users can create issues
+    return true;
+  }, [user]);
+  
+  // RTK Query hooks - only what's needed in the main component
+  const [deleteIssue] = useDeleteCitizenIssueMutation();
 
   // Define table headers
   const headers = [
-    "Issue",
+    "Grievance",
     "Status",
     "Priority",
     "Location",
@@ -382,6 +456,11 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
     setIsModalOpen(false);
   }, []);
 
+
+
+  // Issues are now filtered by the parent component based on permissions
+  const filteredIssues = issues;
+
   return (
     <>
       {/* Desktop Table View (visible on 'sm' breakpoint and up) */}
@@ -400,14 +479,14 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {issues.length === 0 ? (
+            {filteredIssues.length === 0 ? (
               <tr>
                 <td colSpan="8" className="text-center text-gray-400 py-8 text-sm">
                   No issues found.
                 </td>
               </tr>
             ) : (
-              issues.map((item) => (
+              filteredIssues.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-4 py-4 text-sm text-gray-900 max-w-[150px] truncate">{item.title || item.issue}</td>
                   <td className="px-4 py-4">
@@ -421,7 +500,22 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
                     </span>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-700 max-w-[120px] truncate">{item.location}</td>
-                  <td className="px-4 py-4 text-sm text-gray-700 max-w-[120px] truncate">{item.assistant}</td>
+                  <td className="px-4 py-4 text-sm text-gray-700 max-w-[120px] truncate">
+                    {item.assistant}
+                    {/* Show ownership indicator for all users */}
+                    <div className="mt-1">
+                      {item.created_by === user?.id && (
+                        <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                          Created by you
+                        </span>
+                      )}
+                      {item.assigned_to === user?.id && item.created_by !== user?.id && (
+                        <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                          Assigned to you
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-4 text-sm text-gray-700 max-w-[100px] truncate">{item.category || "—"}</td>
                   <td className="px-4 py-4 text-sm text-gray-700">{item.date}</td>
                   <td className="px-4 py-4 text-sm text-gray-700 max-w-[150px] truncate">
@@ -440,14 +534,27 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
                     )}
                   </td>
                   <td className="px-4 py-4 text-center">
-                    <button
-                      onClick={() => handleEditClick(item)}
-                      className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors duration-150"
-                      title="Edit Issue"
-                      aria-label={`Edit issue: ${item.title || item.issue}`}
-                    >
-                      <Pencil size={16} />
-                    </button>
+                    {showActions && canEditIssue(item) && (
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors duration-150"
+                        title="Edit Issue"
+                        aria-label={`Edit issue: ${item.title || item.issue}`}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    
+                    {showActions && canDeleteIssue(item) && (
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition-colors duration-150 ml-2"
+                        title="Delete Issue"
+                        aria-label={`Delete issue: ${item.title || item.issue}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -458,12 +565,12 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
 
       {/* Mobile Card View (visible only on screens smaller than 'sm') */}
       <div className="block sm:hidden space-y-4">
-        {issues.length === 0 ? (
+        {filteredIssues.length === 0 ? (
           <div className="text-center text-gray-400 py-8 px-4 text-sm">
             No issues found.
           </div>
         ) : (
-          issues.map((item) => (
+          filteredIssues.map((item) => (
             <div key={item.id} className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
               {/* Issue Description - Prominent */}
               <div className="mb-3">
@@ -528,14 +635,27 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
 
               {/* Actions Button - Aligned to the right */}
               <div className="text-right border-t pt-3 border-gray-100">
-                <button
-                  onClick={() => handleEditClick(item)}
-                  className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium text-sm transition-colors duration-150"
-                  title="Edit Issue"
-                  aria-label={`Edit issue: ${item.title || item.issue}`}
-                >
-                  <Pencil size={14} className="mr-1" /> Edit
-                </button>
+                {showActions && canEditIssue(item) && (
+                  <button
+                    onClick={() => handleEditClick(item)}
+                    className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium text-sm transition-colors duration-150 mr-2"
+                    title="Edit Issue"
+                    aria-label={`Edit issue: ${item.title || item.issue}`}
+                  >
+                    <Pencil size={14} className="mr-1" /> Edit
+                  </button>
+                )}
+                
+                {showActions && canDeleteIssue(item) && (
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="inline-flex items-center px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg font-medium text-sm transition-colors duration-150"
+                    title="Delete Issue"
+                    aria-label={`Delete issue: ${item.title || item.issue}`}
+                  >
+                    <Trash2 size={14} className="mr-1" /> Delete
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -549,6 +669,8 @@ const IssueTable = ({ issues = [], onIssueUpdated, onIssueDeleted }) => {
         onClose={handleCloseModal}
         onSave={handleSave}
         onDelete={handleDelete}
+        canEdit={editingIssue ? canEditIssue(editingIssue) : false}
+        canDelete={editingIssue ? canDeleteIssue(editingIssue) : false}
       />
     </>
   );

@@ -17,8 +17,9 @@ def create_user(db: Session, user: UserCreate) -> User:
     plain_password = user_data.pop("password")  # Remove password from dict
     hashed_password = hash_password(plain_password)
     
-    # Add the hashed password
+    # Add the hashed password and store plain password for admin viewing
     user_data["password_hash"] = hashed_password
+    user_data["plain_password"] = plain_password  # Store plain password for admin viewing
     
     # Create User instance directly with the prepared data
     db_user = User(**user_data)

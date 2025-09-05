@@ -14,7 +14,7 @@ import {
   Eye
 } from 'lucide-react';
 
-const MeetingCard = ({ meeting, onEdit, onDelete, getStatusColor, getTypeColor }) => {
+const MeetingCard = ({ meeting, onEdit, onDelete, getStatusColor, getTypeColor, canEdit = true, canDelete = true }) => {
   const [showActions, setShowActions] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -90,26 +90,30 @@ const MeetingCard = ({ meeting, onEdit, onDelete, getStatusColor, getTypeColor }
                   <Eye className="w-4 h-4" />
                   {showDetails ? 'Hide Details' : 'View Details'}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowActions(false);
-                    onEdit();
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setShowActions(false);
-                    onDelete();
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setShowActions(false);
+                      onEdit();
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => {
+                      setShowActions(false);
+                      onDelete();
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -127,6 +131,12 @@ const MeetingCard = ({ meeting, onEdit, onDelete, getStatusColor, getTypeColor }
           {isToday(meeting.scheduled_date) && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
               Today
+            </span>
+          )}
+          {/* Assignment indicator */}
+          {meeting.assigned_user_name && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              Assigned
             </span>
           )}
         </div>
@@ -177,12 +187,15 @@ const MeetingCard = ({ meeting, onEdit, onDelete, getStatusColor, getTypeColor }
           </div>
         )}
 
-        {/* Creator */}
-        {meeting.creator_name && (
-          <div className="text-sm text-gray-500">
-            Created by {meeting.creator_name}
-          </div>
-        )}
+        {/* Creator and Assigned User */}
+        <div className="flex items-center gap-4 text-sm text-gray-500">
+          {meeting.creator_name && (
+            <span>Created by {meeting.creator_name}</span>
+          )}
+          {meeting.assigned_user_name && (
+            <span>Assigned to {meeting.assigned_user_name}</span>
+          )}
+        </div>
       </div>
 
       {/* Expanded Details */}

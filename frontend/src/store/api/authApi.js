@@ -1,11 +1,20 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { setAuthenticated, logout as logoutAction } from '../authSlice'
 
 // Simple base query with credentials for httpOnly cookies
 const baseQuery = fetchBaseQuery({
   baseUrl: 'http://localhost:8000',
   credentials: 'include', // For httpOnly cookies
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { getState }) => {
     headers.set('Content-Type', 'application/json')
+    
+    // Add authorization header if token exists
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
+    console.log('Auth API prepareHeaders - Token found:', !!token, 'Token:', token ? token.substring(0, 20) + '...' : 'None')
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    
     return headers
   },
 })
@@ -26,7 +35,17 @@ export const authApi = createApi({
         try {
           const { data } = await queryFulfilled
           
-          // Set auth state directly in the API cache
+          console.log('Login response:', data) // Debug log
+          
+          // Store the access token in localStorage
+          if (data.access_token) {
+            localStorage.setItem('accessToken', data.access_token)
+            console.log('Token stored:', data.access_token) // Debug log
+          } else {
+            console.warn('No access_token in response:', data) // Debug log
+          }
+          
+          // Set auth state in both API cache and auth slice
           dispatch(authApi.util.upsertQueryData('getCurrentUser', undefined, {
             id: data.user_id,
             email: data.email,
@@ -37,8 +56,18 @@ export const authApi = createApi({
             permissions: data.permissions || [],
           }))
           
-          // Set authenticated state
-          dispatch({ type: 'auth/setAuthenticated' })
+          // Also dispatch to auth slice
+          dispatch(setAuthenticated({
+            user: {
+              id: data.user_id,
+              email: data.email,
+              name: data.name,
+              role: data.role,
+              tenant_id: data.tenant_id,
+              user_type: data.user_type,
+              permissions: data.permissions || [],
+            }
+          }))
           
         } catch (error) {
           console.error('Login failed:', error)
@@ -58,10 +87,33 @@ export const authApi = createApi({
           await queryFulfilled
         } catch (error) {
           console.error('Logout error:', error)
+          
+          // If the error is 401 (Unauthorized), try force logout
+          if (error.status === 401) {
+            console.log('Session already expired - trying force logout...')
+            try {
+              // Try the force logout endpoint
+              await fetch('http://localhost:8000/auth/logout-force', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              })
+              console.log('Force logout successful')
+            } catch (forceLogoutError) {
+              console.error('Force logout also failed:', forceLogoutError)
+            }
+          }
         } finally {
+          // Always clear local state regardless of server response
+          // This ensures logout works even if the server is unreachable or returns errors
+          localStorage.removeItem('accessToken')
+          sessionStorage.removeItem('accessToken')
+          
           // Clear all auth data
           dispatch(authApi.util.resetApiState())
-          dispatch({ type: 'auth/logout' })
+          dispatch(logoutAction())
         }
       },
       invalidatesTags: ['Auth'],

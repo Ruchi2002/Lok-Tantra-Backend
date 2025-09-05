@@ -7,7 +7,7 @@ from app.schemas.sent_letter_schema import SentLetterCreate, SentLetterUpdate, S
 
 logger = logging.getLogger(__name__)
 
-def create_sent_letter(db: Session, letter_data: SentLetterCreate, user_id: int, tenant_id: Optional[int] = None) -> SentLetter:
+def create_sent_letter(db: Session, letter_data: SentLetterCreate, user_id: str, tenant_id: Optional[str] = None) -> SentLetter:
     """Create a new sent letter"""
     try:
         # Convert to dict and handle tenant_id properly
@@ -34,7 +34,7 @@ def create_sent_letter(db: Session, letter_data: SentLetterCreate, user_id: int,
         logger.error(f"Error creating sent letter: {str(e)}")
         raise
 
-def get_sent_letter(db: Session, letter_id: int, tenant_id: Optional[int] = None) -> Optional[SentLetter]:
+def get_sent_letter(db: Session, letter_id: int, tenant_id: Optional[str] = None) -> Optional[SentLetter]:
     """Get a specific sent letter by ID"""
     try:
         query = select(SentLetter).where(SentLetter.id == letter_id)
@@ -49,7 +49,7 @@ def get_all_sent_letters(
     db: Session, 
     skip: int = 0, 
     limit: int = 100, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None
 ) -> List[SentLetter]:
     """Get all sent letters with pagination"""
     try:
@@ -65,14 +65,34 @@ def get_all_sent_letters(
 def get_filtered_sent_letters(
     db: Session, 
     filters: SentLetterFilters, 
-    tenant_id: Optional[int] = None
+    tenant_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+    user_role: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Get filtered sent letters with pagination"""
+    """Get filtered sent letters with pagination and role-based filtering"""
     try:
         query = select(SentLetter)
         
-        # Apply tenant filter
-        if tenant_id:
+        # Apply role-based filtering
+        if user_role == "super_admin":
+            # Super admin sees all letters
+            pass
+        elif user_role == "admin" and tenant_id:
+            # Admin sees letters from their tenant
+            query = query.where(SentLetter.tenant_id == tenant_id)
+        elif user_role in ["field_agent", "assistant"] and user_id:
+            # Field agents see only their assigned/created letters
+            query = query.where(
+                or_(
+                    SentLetter.assigned_to == user_id,
+                    SentLetter.created_by == user_id
+                )
+            )
+        elif user_role == "regular_user" and user_id:
+            # Regular users see only their created letters
+            query = query.where(SentLetter.created_by == user_id)
+        elif tenant_id:
+            # Fallback to tenant filtering if provided
             query = query.where(SentLetter.tenant_id == tenant_id)
         
         # Apply search filter
@@ -111,8 +131,37 @@ def get_filtered_sent_letters(
             query = query.where(SentLetter.sent_date <= filters.date_to)
         
         # Get total count for pagination
-        total_query = select(func.count()).select_from(query.subquery())
-        total = db.exec(total_query).first() or 0
+        count_query = select(func.count(SentLetter.id))
+        if tenant_id:
+            count_query = count_query.where(SentLetter.tenant_id == tenant_id)
+        
+        # Apply same filters as main query
+        if filters.search:
+            search_term = f"%{filters.search}%"
+            count_query = count_query.where(
+                or_(
+                    SentLetter.recipient_name.ilike(search_term),
+                    SentLetter.recipient_organization.ilike(search_term),
+                    SentLetter.subject.ilike(search_term),
+                    SentLetter.content.ilike(search_term),
+                    SentLetter.category.ilike(search_term)
+                )
+            )
+        
+        if filters.status:
+            count_query = count_query.where(SentLetter.status == filters.status)
+        if filters.priority:
+            count_query = count_query.where(SentLetter.priority == filters.priority)
+        if filters.category:
+            count_query = count_query.where(SentLetter.category == filters.category)
+        if filters.assigned_to:
+            count_query = count_query.where(SentLetter.assigned_to == filters.assigned_to)
+        if filters.date_from:
+            count_query = count_query.where(SentLetter.sent_date >= filters.date_from)
+        if filters.date_to:
+            count_query = count_query.where(SentLetter.sent_date <= filters.date_to)
+        
+        total = db.exec(count_query).first()
         
         # Apply pagination and ordering
         query = query.order_by(desc(SentLetter.created_at))
@@ -137,8 +186,8 @@ def update_sent_letter(
     db: Session, 
     letter_id: int, 
     letter_data: SentLetterUpdate, 
-    user_id: int,
-    tenant_id: Optional[int] = None
+    user_id: str,
+    tenant_id: Optional[str] = None
 ) -> Optional[SentLetter]:
     """Update a sent letter"""
     try:
@@ -163,7 +212,7 @@ def update_sent_letter(
         logger.error(f"Error updating sent letter {letter_id}: {str(e)}")
         raise
 
-def delete_sent_letter(db: Session, letter_id: int, tenant_id: Optional[int] = None) -> bool:
+def delete_sent_letter(db: Session, letter_id: int, tenant_id: Optional[str] = None) -> bool:
     """Delete a sent letter"""
     try:
         db_letter = get_sent_letter(db, letter_id, tenant_id)
@@ -179,79 +228,94 @@ def delete_sent_letter(db: Session, letter_id: int, tenant_id: Optional[int] = N
         logger.error(f"Error deleting sent letter {letter_id}: {str(e)}")
         raise
 
-def get_sent_letter_statistics(db: Session, tenant_id: Optional[int] = None) -> SentLetterStatistics:
-    """Get statistics for sent letters"""
+def get_sent_letter_statistics(db: Session, tenant_id: Optional[str] = None, user_id: Optional[str] = None, user_role: Optional[str] = None) -> SentLetterStatistics:
+    """Get statistics for sent letters with role-based filtering"""
     try:
         base_query = select(SentLetter)
-        if tenant_id:
+        
+        # Apply role-based filtering
+        if user_role == "super_admin":
+            # Super admin sees all letters
+            pass
+        elif user_role == "admin" and tenant_id:
+            # Admin sees letters from their tenant
+            base_query = base_query.where(SentLetter.tenant_id == tenant_id)
+        elif user_role in ["field_agent", "assistant"] and user_id:
+            # Field agents see only their assigned/created letters
+            base_query = base_query.where(
+                or_(
+                    SentLetter.assigned_to == user_id,
+                    SentLetter.created_by == user_id
+                )
+            )
+        elif user_role == "regular_user" and user_id:
+            # Regular users see only their created letters
+            base_query = base_query.where(SentLetter.created_by == user_id)
+        elif tenant_id:
+            # Fallback to tenant filtering if provided
             base_query = base_query.where(SentLetter.tenant_id == tenant_id)
         
         # Total letters
-        total_letters = db.exec(select(func.count()).select_from(base_query.subquery())).first() or 0
+        total_query = select(func.count(SentLetter.id))
+        if tenant_id:
+            total_query = total_query.where(SentLetter.tenant_id == tenant_id)
+        total_letters = db.exec(total_query).first()
         
         # Status counts
-        awaiting_response = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.status == SentLetterStatus.AWAITING_RESPONSE).subquery()
-            )
-        ).first() or 0
+        awaiting_query = select(func.count(SentLetter.id)).where(SentLetter.status == SentLetterStatus.AWAITING_RESPONSE)
+        if tenant_id:
+            awaiting_query = awaiting_query.where(SentLetter.tenant_id == tenant_id)
+        awaiting_response = db.exec(awaiting_query).first()
         
-        response_received = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.status == SentLetterStatus.RESPONSE_RECEIVED).subquery()
-            )
-        ).first() or 0
+        response_query = select(func.count(SentLetter.id)).where(SentLetter.status == SentLetterStatus.RESPONSE_RECEIVED)
+        if tenant_id:
+            response_query = response_query.where(SentLetter.tenant_id == tenant_id)
+        response_received = db.exec(response_query).first()
         
-        closed = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.status == SentLetterStatus.CLOSED).subquery()
-            )
-        ).first() or 0
+        closed_query = select(func.count(SentLetter.id)).where(SentLetter.status == SentLetterStatus.CLOSED)
+        if tenant_id:
+            closed_query = closed_query.where(SentLetter.tenant_id == tenant_id)
+        closed = db.exec(closed_query).first()
         
         # Priority counts
-        high_priority = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.priority == SentLetterPriority.HIGH).subquery()
-            )
-        ).first() or 0
+        high_query = select(func.count(SentLetter.id)).where(SentLetter.priority == SentLetterPriority.HIGH)
+        if tenant_id:
+            high_query = high_query.where(SentLetter.tenant_id == tenant_id)
+        high_priority = db.exec(high_query).first()
         
-        medium_priority = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.priority == SentLetterPriority.MEDIUM).subquery()
-            )
-        ).first() or 0
+        medium_query = select(func.count(SentLetter.id)).where(SentLetter.priority == SentLetterPriority.MEDIUM)
+        if tenant_id:
+            medium_query = medium_query.where(SentLetter.tenant_id == tenant_id)
+        medium_priority = db.exec(medium_query).first()
         
-        low_priority = db.exec(
-            select(func.count()).select_from(
-                base_query.where(SentLetter.priority == SentLetterPriority.LOW).subquery()
-            )
-        ).first() or 0
+        low_query = select(func.count(SentLetter.id)).where(SentLetter.priority == SentLetterPriority.LOW)
+        if tenant_id:
+            low_query = low_query.where(SentLetter.tenant_id == tenant_id)
+        low_priority = db.exec(low_query).first()
         
         # Overdue follow-ups (follow_up_date is past and status is not closed)
-        overdue_followups = db.exec(
-            select(func.count()).select_from(
-                base_query.where(
-                    and_(
-                        SentLetter.follow_up_date < datetime.utcnow(),
-                        SentLetter.status != SentLetterStatus.CLOSED
-                    )
-                ).subquery()
+        overdue_query = select(func.count(SentLetter.id)).where(
+            and_(
+                SentLetter.follow_up_date < datetime.utcnow(),
+                SentLetter.status != SentLetterStatus.CLOSED
             )
-        ).first() or 0
+        )
+        if tenant_id:
+            overdue_query = overdue_query.where(SentLetter.tenant_id == tenant_id)
+        overdue_followups = db.exec(overdue_query).first()
         
         # Follow-ups due this week
         week_from_now = datetime.utcnow() + timedelta(days=7)
-        followups_due_this_week = db.exec(
-            select(func.count()).select_from(
-                base_query.where(
-                    and_(
-                        SentLetter.follow_up_date >= datetime.utcnow(),
-                        SentLetter.follow_up_date <= week_from_now,
-                        SentLetter.status != SentLetterStatus.CLOSED
-                    )
-                ).subquery()
+        week_query = select(func.count(SentLetter.id)).where(
+            and_(
+                SentLetter.follow_up_date >= datetime.utcnow(),
+                SentLetter.follow_up_date <= week_from_now,
+                SentLetter.status != SentLetterStatus.CLOSED
             )
-        ).first() or 0
+        )
+        if tenant_id:
+            week_query = week_query.where(SentLetter.tenant_id == tenant_id)
+        followups_due_this_week = db.exec(week_query).first()
         
         return SentLetterStatistics(
             total_letters=total_letters,
@@ -268,7 +332,7 @@ def get_sent_letter_statistics(db: Session, tenant_id: Optional[int] = None) -> 
         logger.error(f"Error fetching sent letter statistics: {str(e)}")
         raise
 
-def get_sent_letters_by_status(db: Session, status: SentLetterStatus, tenant_id: Optional[int] = None) -> List[SentLetter]:
+def get_sent_letters_by_status(db: Session, status: SentLetterStatus, tenant_id: Optional[str] = None) -> List[SentLetter]:
     """Get sent letters by status"""
     try:
         query = select(SentLetter).where(SentLetter.status == status)
@@ -280,7 +344,7 @@ def get_sent_letters_by_status(db: Session, status: SentLetterStatus, tenant_id:
         logger.error(f"Error fetching sent letters by status {status}: {str(e)}")
         raise
 
-def get_sent_letters_by_priority(db: Session, priority: SentLetterPriority, tenant_id: Optional[int] = None) -> List[SentLetter]:
+def get_sent_letters_by_priority(db: Session, priority: SentLetterPriority, tenant_id: Optional[str] = None) -> List[SentLetter]:
     """Get sent letters by priority"""
     try:
         query = select(SentLetter).where(SentLetter.priority == priority)
@@ -292,7 +356,7 @@ def get_sent_letters_by_priority(db: Session, priority: SentLetterPriority, tena
         logger.error(f"Error fetching sent letters by priority {priority}: {str(e)}")
         raise
 
-def get_overdue_followups(db: Session, tenant_id: Optional[int] = None) -> List[SentLetter]:
+def get_overdue_followups(db: Session, tenant_id: Optional[str] = None) -> List[SentLetter]:
     """Get sent letters with overdue follow-ups"""
     try:
         query = select(SentLetter).where(
@@ -309,7 +373,7 @@ def get_overdue_followups(db: Session, tenant_id: Optional[int] = None) -> List[
         logger.error(f"Error fetching overdue followups: {str(e)}")
         raise
 
-def get_followups_due_this_week(db: Session, tenant_id: Optional[int] = None) -> List[SentLetter]:
+def get_followups_due_this_week(db: Session, tenant_id: Optional[str] = None) -> List[SentLetter]:
     """Get sent letters with follow-ups due this week"""
     try:
         week_from_now = datetime.utcnow() + timedelta(days=7)
@@ -328,7 +392,7 @@ def get_followups_due_this_week(db: Session, tenant_id: Optional[int] = None) ->
         logger.error(f"Error fetching followups due this week: {str(e)}")
         raise
 
-def assign_sent_letter_to_user(db: Session, letter_id: int, user_id: int, assigned_user_id: int, tenant_id: Optional[int] = None) -> Optional[SentLetter]:
+def assign_sent_letter_to_user(db: Session, letter_id: int, user_id: str, assigned_user_id: str, tenant_id: Optional[str] = None) -> Optional[SentLetter]:
     """Assign a sent letter to a specific user"""
     try:
         db_letter = get_sent_letter(db, letter_id, tenant_id)
@@ -349,7 +413,7 @@ def assign_sent_letter_to_user(db: Session, letter_id: int, user_id: int, assign
         logger.error(f"Error assigning sent letter {letter_id} to user {assigned_user_id}: {str(e)}")
         raise
 
-def update_sent_letter_status(db: Session, letter_id: int, status: SentLetterStatus, user_id: int, tenant_id: Optional[int] = None) -> Optional[SentLetter]:
+def update_sent_letter_status(db: Session, letter_id: int, status: SentLetterStatus, user_id: str, tenant_id: Optional[str] = None) -> Optional[SentLetter]:
     """Update sent letter status"""
     try:
         db_letter = get_sent_letter(db, letter_id, tenant_id)
@@ -374,7 +438,7 @@ def update_sent_letter_status(db: Session, letter_id: int, status: SentLetterSta
         logger.error(f"Error updating sent letter {letter_id} status to {status}: {str(e)}")
         raise
 
-def record_response_received(db: Session, letter_id: int, response_content: str, user_id: int, tenant_id: Optional[int] = None) -> Optional[SentLetter]:
+def record_response_received(db: Session, letter_id: int, response_content: str, user_id: str, tenant_id: Optional[str] = None) -> Optional[SentLetter]:
     """Record that a response was received for a sent letter"""
     try:
         db_letter = get_sent_letter(db, letter_id, tenant_id)

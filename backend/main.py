@@ -19,9 +19,11 @@ from app.routes.areas import router as Area
 from app.routes.visits import router as Visit
 from app.routes.visit_issue import router as Visit_Issue
 from app.routes.dashboard import router as dashboard_router
-from app.routes.received_letters import router as received_letters_router
+from app.routes.letters import router as letters_router
+from app.routes.letters_legacy import router as letters_legacy_router
 from app.routes.sent_letters import router as sent_letters_router
 from app.routes.sent_grievance_letters import router as sent_grievance_letters_router
+from app.routes.received_letters import router as received_letters_router
 from app.routes.meeting_programs import router as meeting_programs_router
 
 # Import middleware
@@ -76,10 +78,12 @@ app.include_router(Area, tags=["Areas"])
 app.include_router(Visit, tags=["Visits"])
 app.include_router(Visit_Issue, tags=["Visit Issues"])
 app.include_router(dashboard_router, tags=["Dashboard"])
-app.include_router(received_letters_router, tags=["Received Letters"])
-app.include_router(sent_letters_router, tags=["Sent Letters - Public Interest"])
 app.include_router(meeting_programs_router, tags=["Meeting Programs"])
-app.include_router(sent_grievance_letters_router, tags=["Sent Letters - Public Grievance"])
+app.include_router(letters_router, tags=["Letters"])
+app.include_router(letters_legacy_router, tags=["Letters Legacy"])
+app.include_router(sent_letters_router, tags=["Sent Letters"])
+app.include_router(sent_grievance_letters_router, tags=["Sent Grievance Letters"])
+app.include_router(received_letters_router, tags=["Received Letters"])
 
 @app.get("/", tags=["Health Check"])
 def root():
